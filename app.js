@@ -1,437 +1,296 @@
-// ====== CONFIG ======
-const CONFIG = {
-  teams: [
-    {
-      id: "LEC",
-      label: "LEC",
-      color: "#10b981",
-      actions: [
-        { key: "LEC_GOL",     label: "Gol",        color: "#f43f5e" }, // vermelho
-        { key: "LEC_ESCANTEIO", label: "Escanteio", color: "#10b981" }, // verde
-        { key: "LEC_FALTA",   label: "Falta",      color: "#3b82f6" }  // azul
-      ]
-    },
-    {
-      id: "ADV",
-      label: "ADV",
-      color: "#ef4444",
-      actions: [
-        { key: "ADV_GOL",     label: "Gol",        color: "#f43f5e" },
-        { key: "ADV_ESCANTEIO", label: "Escanteio", color: "#10b981" },
-        { key: "ADV_FALTA",   label: "Falta",      color: "#3b82f6" }
-      ]
-    }
-  ],
-  regionGroups: [
-    { key: "FINALIZACAO",   label: "Finalizações" },
-    { key: "ENTRADA_TERCO", label: "Entradas no Último Terço" }
-  ],
-  regions: ["R1","R2","R3","R4","R5","R6"],
-  clip: { preMs: 25000, postMs: 10000 }
+// ============ CONFIG PERSONALIZÁVEL ============
+const TEAM_CONFIG = {
+  LEC: {
+    actions: [
+      { key: 'gol',       label: 'GOL',        color: '#16a34a' }, // verde
+      { key: 'escanteio', label: 'ESCANTEIO',  color: '#0ea5e9' }, // azul
+      { key: 'falta',     label: 'FALTA',      color: '#f59e0b' }  // amarelo
+    ],
+    color: '#16a34a'
+  },
+  ADV: {
+    actions: [
+      { key: 'gol',       label: 'GOL',        color: '#ef4444' }, // vermelho
+      { key: 'escanteio', label: 'ESCANTEIO',  color: '#8b5cf6' }, // roxo
+      { key: 'falta',     label: 'FALTA',      color: '#f97316' }  // laranja
+    ],
+    color: '#ef4444'
+  }
 };
 
-// ====== STATE ======
-let counters = {};        // { "LEC_FINALIZACAO_R1": 3, ... }
-let eventRecords = [];    // [{ type, timestampISO, clipStartISO, clipEndISO }]
-let clockInterval = null;
-let clockStartEpoch = null;
-let clockPausedAccum = 0; // ms acumulados enquanto rodou
-const LS_KEYS = { counters: "hud_counters", events: "hud_events", clock: "hud_clock" };
+const CLIP_BACK_SECONDS = 25; // -25s
+const CLIP_FWD_SECONDS  = 10; // +10s
+// ==============================================
 
-// ====== INIT ======
-document.addEventListener("DOMContentLoaded", () => {
-  // Renderizar telas
-  renderFieldGrids();
-  renderActionButtons();
+const state = {
+  currentPeriod: '1°T',
+  isRunning: true,
+  timerSeconds: 0,
+  intervalId: null,
+  // contagens por equipe, tipo e zona/botão
+  counts: {
+    LEC: { finalizacao: initZones(), entrada: initZones(), actions: {} },
+    ADV: { finalizacao: initZones(), entrada: initZones(), actions: {} }
+  },
+  // eventos completos para exportação XML
+  events: []
+};
 
-  // Carregar estado
-  loadState();
+function initZones(){
+  const z = {};
+  for (let i=1;i<=6;i++) z[i]=0;
+  return z;
+}
 
-  // Wire buttons
-  document.getElementById("btn-export-csv").addEventListener("click", exportCSV);
-  document.getElementById("btn-export-xml").addEventListener("click", exportXML);
+function pad(n){ return String(n).padStart(2,'0'); }
+function mmssFrom(sec){
+  const m = Math.floor(sec/60), s = sec%60;
+  return `${pad(m)}:${pad(s)}`;
+}
+function nowISO(){ return new Date().toISOString(); }
 
-  // Relógio
-  document.getElementById("btn-start").addEventListener("click", startClock);
-  document.getElementById("btn-pause").addEventListener("click", pauseClock);
-  document.getElementById("btn-reset").addEventListener("click", resetClock);
-  updateClockUI(0);
-});
+function saveLocal(){
+  localStorage.setItem('hud_state', JSON.stringify({
+    currentPeriod: state.currentPeriod,
+    isRunning: state.isRunning,
+    timerSeconds: state.timerSeconds,
+    counts: state.counts,
+    events: state.events
+  }));
+}
+function loadLocal(){
+  const raw = localStorage.getItem('hud_state');
+  if(!raw) return;
+  try{
+    const data = JSON.parse(raw);
+    Object.assign(state, {
+      currentPeriod: data.currentPeriod ?? '1°T',
+      isRunning: data.isRunning ?? false,
+      timerSeconds: data.timerSeconds ?? 0,
+      counts: data.counts ?? state.counts,
+      events: data.events ?? []
+    });
+  }catch(e){ console.warn('Falha ao carregar localStorage', e); }
+}
 
-// ====== RENDER ======
-function renderFieldGrids(){
-  document.querySelectorAll(".field-grid").forEach(grid => {
-    const teamId = grid.getAttribute("data-team");
-    const groupKey = grid.getAttribute("data-group");
-    grid.innerHTML = ""; // reset
+function startTimer(){
+  if(state.intervalId) return;
+  state.isRunning = true;
+  state.intervalId = setInterval(()=>{
+    state.timerSeconds++;
+    renderTimer();
+  }, 1000);
+  renderTimer();
+  saveLocal();
+}
+function stopTimer(){
+  if(state.intervalId){
+    clearInterval(state.intervalId);
+    state.intervalId = null;
+  }
+  state.isRunning = false;
+  renderTimer();
+  saveLocal();
+}
+function resetTimer(){
+  stopTimer();
+  state.timerSeconds = 0;
+  renderTimer();
+  saveLocal();
+}
 
-    CONFIG.regions.forEach(region => {
-      const key = `${teamId}_${groupKey}_${region}`;
-      const btn = document.createElement("button");
-      btn.className = "field-cell";
-      btn.setAttribute("data-key", key);
-      btn.innerHTML = `<span>${region}</span> <span class="badge" id="count-${key}">0</span>`;
-      btn.addEventListener("click", () => recordEvent(key));
-      grid.appendChild(btn);
-      if(!(key in counters)) counters[key] = 0;
+function setPeriod(p){ state.currentPeriod = p; renderTimer(); saveLocal(); }
+
+function renderTimer(){
+  document.getElementById('current-period').textContent = state.currentPeriod;
+  document.getElementById('timer').textContent = mmssFrom(state.timerSeconds);
+  document.getElementById('btn-toggle').textContent = state.isRunning ? 'Pausar' : 'Continuar';
+}
+
+function clampZero(n){ return n < 0 ? 0 : n; }
+
+function registerEvent({team, type, zone=null, actionKey=null}){
+  // contagem
+  if(type === 'finalizacao' || type === 'entrada'){
+    state.counts[team][type][zone] += 1;
+  } else if(type === 'action' && actionKey){
+    state.counts[team].actions[actionKey] = (state.counts[team].actions[actionKey]||0)+1;
+  }
+
+  // evento para XML
+  const t = state.timerSeconds;
+  const clipStart = clampZero(t - CLIP_BACK_SECONDS);
+  const clipEnd   = t + CLIP_FWD_SECONDS;
+
+  state.events.push({
+    timestampISO: nowISO(),
+    period: state.currentPeriod,
+    timer: mmssFrom(t),
+    timerSeconds: t,
+    team,
+    type,
+    zone,
+    actionKey,
+    clipStartSec: clipStart,
+    clipEndSec: clipEnd,
+    clipStart: mmssFrom(clipStart),
+    clipEnd: mmssFrom(clipEnd)
+  });
+
+  saveLocal();
+}
+
+function setupActions(){
+  // Renderiza 3 botões por equipe a partir do TEAM_CONFIG
+  ['LEC','ADV'].forEach(team=>{
+    const container = document.getElementById(team === 'LEC' ? 'actions-lec' : 'actions-adv');
+    container.innerHTML = '';
+    TEAM_CONFIG[team].actions.forEach(cfg=>{
+      // inicializa contador
+      if(state.counts[team].actions[cfg.key] == null) state.counts[team].actions[cfg.key] = 0;
+
+      const btn = document.createElement('button');
+      btn.className = 'action-btn';
+      btn.style.background = cfg.color;
+
+      btn.innerHTML = `
+        <span class="label">${cfg.label}</span>
+        <span class="counter" data-team="${team}" data-key="${cfg.key}">${state.counts[team].actions[cfg.key]}</span>
+      `;
+
+      btn.addEventListener('click', ()=>{
+        if(!state.isRunning) return;
+        registerEvent({team, type:'action', actionKey: cfg.key});
+        // atualiza contador visual
+        const counter = btn.querySelector('.counter');
+        counter.textContent = state.counts[team].actions[cfg.key];
+      });
+
+      container.appendChild(btn);
     });
   });
 }
 
-function renderActionButtons(){
-  const lecBox = document.getElementById("actions-lec");
-  const advBox = document.getElementById("actions-adv");
-  lecBox.innerHTML = ""; advBox.innerHTML = "";
+function setupZones(){
+  // Anexa listeners aos 24 botões de zona (12 por equipe)
+  document.querySelectorAll('.zone-grid').forEach(grid=>{
+    const team = grid.dataset.team; // 'LEC' ou 'ADV'
+    const type = grid.dataset.type; // 'finalizacao' ou 'entrada'
+    grid.querySelectorAll('.zone').forEach(btn=>{
+      const zone = Number(btn.dataset.zone);
+      // desenha contagem inicial
+      const countSpan = btn.querySelector('.count');
+      countSpan.textContent = state.counts[team][type][zone];
 
-  CONFIG.teams.forEach(team => {
-    const box = team.id === "LEC" ? lecBox : advBox;
-    team.actions.forEach(action => {
-      if(!(action.key in counters)) counters[action.key] = 0;
-      const btn = document.createElement("button");
-      btn.className = "action-btn";
-      btn.style.background = action.color;
-      btn.setAttribute("data-key", action.key);
-      btn.innerHTML = `<span>${action.label}</span> <span class="count" id="count-${action.key}">${counters[action.key]}</span>`;
-      btn.addEventListener("click", () => recordEvent(action.key));
-      box.appendChild(btn);
+      btn.addEventListener('click', ()=>{
+        if(!state.isRunning) return;
+        registerEvent({team, type, zone});
+        countSpan.textContent = state.counts[team][type][zone];
+      });
     });
   });
 }
 
-// ====== RECORD / COUNTERS ======
-function recordEvent(eventKey){
-  // 1) contador
-  counters[eventKey] = (counters[eventKey] || 0) + 1;
-  const badge = document.getElementById(`count-${eventKey}`);
-  if (badge) badge.textContent = counters[eventKey];
-
-  // 2) timestamps (-25s / +10s)
-  const now = Date.now();
-  const clipStart = new Date(now - CONFIG.clip.preMs);
-  const clipEnd   = new Date(now + CONFIG.clip.postMs);
-
-  eventRecords.push({
-    type: eventKey,
-    timestampISO: new Date(now).toISOString(),
-    clipStartISO: clipStart.toISOString(),
-    clipEndISO: clipEnd.toISOString()
-  });
-
-  persistState();
-}
-
-// ====== STORAGE ======
-function persistState(){
-  try {
-    localStorage.setItem(LS_KEYS.counters, JSON.stringify(counters));
-    localStorage.setItem(LS_KEYS.events, JSON.stringify(eventRecords));
-  } catch(e) { console.warn("Falha ao salvar estado:", e); }
-}
-
-function loadState(){
-  try {
-    const c = localStorage.getItem(LS_KEYS.counters);
-    const e = localStorage.getItem(LS_KEYS.events);
-    if (c) counters = JSON.parse(c);
-    if (e) eventRecords = JSON.parse(e);
-  } catch(_) {}
-
-  // Atualiza UI de contadores
-  Object.keys(counters).forEach(k => {
-    const el = document.getElementById(`count-${k}`);
-    if (el) el.textContent = counters[k];
-  });
-}
-
-// ====== CLOCK ======
-function startClock(){
-  if (clockInterval) return; // já rodando
-  if (!clockStartEpoch) clockStartEpoch = Date.now() - clockPausedAccum;
-  clockInterval = setInterval(() => {
-    const elapsed = Date.now() - clockStartEpoch;
-    updateClockUI(elapsed);
-  }, 200);
-}
-
-function pauseClock(){
-  if (!clockInterval) return;
-  clearInterval(clockInterval); clockInterval = null;
-  clockPausedAccum = Date.now() - clockStartEpoch;
-}
-
-function resetClock(){
-  clearInterval(clockInterval); clockInterval = null;
-  clockStartEpoch = null; clockPausedAccum = 0;
-  updateClockUI(0);
-}
-
-function updateClockUI(ms){
-  const el = document.getElementById("match-clock");
-  const totalSec = Math.floor(ms/1000);
-  const mm = String(Math.floor(totalSec/60)).padStart(2,'0');
-  const ss = String(totalSec%60).padStart(2,'0');
-  el.textContent = `${mm}:${ss}`;
-}
-
-// ====== EXPORTS ======
 function exportCSV(){
-  // Cabeçalho: Evento,Contagem
-  const keys = Object.keys(counters).sort();
-  let csv = "Evento,Contagem\n";
-  keys.forEach(k => { csv += `${k},${counters[k]}\n`; });
-  const now = new Date();
-  downloadFile(csv, `juega10_contadores_${fmtStamp(now)}.csv`, "text/csv");
+  // CSV com contadores agregados por equipe/evento/zone-OU-ação
+  const rows = [];
+  rows.push(['team','event','category','id','count']);
+  ['LEC','ADV'].forEach(team=>{
+    // Finalizações por zona 1..6
+    for(let z=1; z<=6; z++){
+      rows.push([team, 'finalizacao', 'zona', String(z), String(state.counts[team].finalizacao[z])]);
+    }
+    // Entradas por zona 1..6
+    for(let z=1; z<=6; z++){
+      rows.push([team, 'entrada', 'zona', String(z), String(state.counts[team].entrada[z])]);
+    }
+    // Ações
+    const actions = TEAM_CONFIG[team].actions;
+    actions.forEach(a=>{
+      rows.push([team, 'action', 'botao', a.key, String(state.counts[team].actions[a.key]||0)]);
+    });
+  });
+
+  const csv = rows.map(r => r.map(cell => `"${String(cell).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `juega10_counts_${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 }
 
 function exportXML(){
-  // <Events><Event type="" timestamp="" clipStart="" clipEnd="" /></Events>
-  const now = new Date();
-  let xml = '<?xml version="1.0" encoding="UTF-8"?>\n<Events>\n';
-  eventRecords.forEach(ev => {
-    xml += `  <Event type="${ev.type}" timestamp="${ev.timestampISO}" clipStart="${ev.clipStartISO}" clipEnd="${ev.clipEndISO}" />\n`;
+  // XML com todos os eventos e faixas de clip
+  const esc = (s)=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  let xml = `<?xml version="1.0" encoding="UTF-8"?>\n<match>\n`;
+  xml += `  <meta>\n`;
+  xml += `    <generatedAt>${esc(nowISO())}</generatedAt>\n`;
+  xml += `    <period>${esc(state.currentPeriod)}</period>\n`;
+  xml += `  </meta>\n`;
+  xml += `  <events>\n`;
+
+  state.events.forEach((ev, idx)=>{
+    xml += `    <event id="${idx+1}" team="${esc(ev.team)}" type="${esc(ev.type)}"${ev.zone?` zone="${ev.zone}"`:''}${ev.actionKey?` actionKey="${esc(ev.actionKey)}"`:''} period="${esc(ev.period)}">\n`;
+    xml += `      <timestampISO>${esc(ev.timestampISO)}</timestampISO>\n`;
+    xml += `      <timer>${esc(ev.timer)}</timer>\n`;
+    xml += `      <clip startSec="${ev.clipStartSec}" endSec="${ev.clipEndSec}" start="${esc(ev.clipStart)}" end="${esc(ev.clipEnd)}" />\n`;
+    xml += `    </event>\n`;
   });
-  xml += '</Events>';
-  downloadFile(xml, `juega10_eventos_${fmtStamp(now)}.xml`, "application/xml");
+
+  xml += `  </events>\n</match>`;
+
+  const blob = new Blob([xml], { type: 'application/xml;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `juega10_events_${new Date().toISOString().slice(0,10)}.xml`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 }
 
-function fmtStamp(d){
-  // yyyy-mm-dd_hh-mm-ss
-  const pad = n => String(n).padStart(2,'0');
-  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}_${pad(d.getHours())}-${pad(d.getMinutes())}-${pad(d.getSeconds())}`;
-}
-
-function downloadFile(content, filename, type){
-  const blob = new Blob([content], { type });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url; a.download = filename; document.body.appendChild(a); a.click();
-  a.remove(); URL.revokeObjectURL(url);
-}
-
-// ======= Estado =======
-let startTime = null;
-let elapsedMs = 0;
-let intervalId = null;
-let running = true; // relógio contínuo
-let counters = {};  // {key: number}
-let matchId = null;
-
-// ======= Elementos =======
-const timerDisplay = document.getElementById('timerDisplay');
-const toggleBtn = document.getElementById('toggleBtn');
-const resetBtn = document.getElementById('resetBtn');
-const tagsGrid = document.getElementById('tagsGrid');
-const exportCsvBtn = document.getElementById('exportCsvBtn');
-const exportXmlBtn = document.getElementById('exportXmlBtn');
-const statusMsg = document.getElementById('statusMsg');
-
-// ======= Util =======
-function two(n) { return n.toString().padStart(2, '0'); }
-function formatMMSS(ms) {
-  const totalSec = Math.floor(ms / 1000);
-  const mm = Math.floor(totalSec / 60);
-  const ss = totalSec % 60;
-  return `${two(mm)}:${two(ss)}`;
-}
-function nowIso() { return new Date().toISOString(); }
-
-// ======= Persistência local =======
-const STORE_KEY = 'hud-timer-state-v2';
-function saveState() {
-  const data = {
-    elapsedMs,
-    running,
-    counters,
-    matchId,
-    savedAt: nowIso()
+function clearData(){
+  if(!confirm('Limpar dados locais (contagens e eventos)?')) return;
+  state.currentPeriod = '1°T';
+  state.isRunning = false;
+  state.timerSeconds = 0;
+  state.counts = {
+    LEC: { finalizacao: initZones(), entrada: initZones(), actions: {} },
+    ADV: { finalizacao: initZones(), entrada: initZones(), actions: {} }
   };
-  localStorage.setItem(STORE_KEY, JSON.stringify(data));
-}
-function loadState() {
-  const raw = localStorage.getItem(STORE_KEY);
-  if (!raw) return;
-  try {
-    const data = JSON.parse(raw);
-    elapsedMs = data.elapsedMs || 0;
-    running = data.running ?? true;
-    counters = data.counters || {};
-    matchId = data.matchId || null;
-  } catch {}
-}
-
-// ======= Timer =======
-function tick() {
-  const now = Date.now();
-  elapsedMs += now - startTime;
-  startTime = now;
-  timerDisplay.textContent = formatMMSS(elapsedMs);
-}
-function startTimer() {
-  if (intervalId) return;
-  startTime = Date.now();
-  intervalId = setInterval(tick, 250);
-  toggleBtn.textContent = 'Pausar';
-  running = true;
-  saveState();
-}
-function stopTimer() {
-  if (!intervalId) return;
-  clearInterval(intervalId);
-  intervalId = null;
-  toggleBtn.textContent = 'Continuar';
-  running = false;
-  saveState();
-}
-function resetTimerAndCounts(confirmar = true) {
-  const ok = confirmar ? confirm('Zerar cronômetro e contadores?') : true;
-  if (!ok) return;
+  state.events = [];
   stopTimer();
-  elapsedMs = 0;
-  Object.keys(counters).forEach(k => counters[k] = 0);
-  updateAllCounts();
-  timerDisplay.textContent = formatMMSS(0);
-  running = true;
-  startTimer();
-  status('Zerado.');
-  saveState();
+  renderTimer();
+  // zera contadores na UI
+  document.querySelectorAll('.zone .count').forEach(el=>el.textContent='0');
+  document.querySelectorAll('.action-btn .counter').forEach(el=>el.textContent='0');
+  saveLocal();
 }
 
-// ======= Tags / UI =======
-function ensureCounters() {
-  TAGS.forEach(t => { if (typeof counters[t.key] !== 'number') counters[t.key] = 0; });
-}
-function createTagButton(tag, idx) {
-  const btn = document.createElement('button');
-  btn.className = `tag-btn tag-${idx+1}`;
-  btn.dataset.key = tag.key;
-  btn.setAttribute('aria-label', `${tag.label}`);
-  btn.innerHTML = `
-    <span class="label">${tag.label}</span>
-    <span class="count" id="count-${tag.key}">0</span>
-  `;
-  btn.addEventListener('click', () => {
-    counters[tag.key] = (counters[tag.key] || 0) + 1;
-    updateCount(tag.key);
-    haptic();
-    saveState();
-  });
-  return btn;
-}
-function updateCount(key) {
-  const el = document.getElementById(`count-${key}`);
-  if (el) el.textContent = counters[key] || 0;
-}
-function updateAllCounts() {
-  TAGS.forEach(t => updateCount(t.key));
-}
-function buildButtons() {
-  tagsGrid.innerHTML = '';
-  TAGS.forEach((t, i) => {
-    const btn = createTagButton(t, i);
-    tagsGrid.appendChild(btn);
-  });
+function bindTopBar(){
+  document.getElementById('btn-inicio-1t').addEventListener('click', ()=>{ setPeriod('1°T'); state.timerSeconds=0; startTimer(); });
+  document.getElementById('btn-final-1t').addEventListener('click', ()=>{ setPeriod('1°T'); stopTimer(); });
+  document.getElementById('btn-inicio-2t').addEventListener('click', ()=>{ setPeriod('2°T'); state.timerSeconds=0; startTimer(); });
+  document.getElementById('btn-final-2t').addEventListener('click', ()=>{ setPeriod('2°T'); stopTimer(); });
+  document.getElementById('btn-toggle').addEventListener('click', ()=>{ state.isRunning ? stopTimer() : startTimer(); });
+  document.getElementById('btn-reset').addEventListener('click', resetTimer);
+  document.getElementById('btn-export-csv').addEventListener('click', exportCSV);
+  document.getElementById('btn-export-xml').addEventListener('click', exportXML);
+  document.getElementById('btn-clear').addEventListener('click', clearData);
 }
 
-// Haptic feedback (limitado no iOS, mas tentamos)
-function haptic() {
-  if (navigator.vibrate) {
-    navigator.vibrate(10);
+// Inicialização
+loadLocal();
+window.addEventListener('DOMContentLoaded', ()=>{
+  renderTimer();
+  setupActions();
+  setupZones();
+  bindTopBar();
+  if(state.isRunning){ startTimer(); }
+  else { // inicia automaticamente na primeira execução
+    if(state.timerSeconds === 0 && state.events.length===0){
+      startTimer();
+    }
   }
-}
-
-// ======= Exportação =======
-function exportCSV() {
-  // CSV simples: tag,count
-  const header = 'tag,count';
-  const lines = TAGS.map(t => `${sanitizeCsv(t.label)},${counters[t.key] || 0}`);
-  const csv = [header, ...lines].join('\n');
-
-  downloadText(csv, `stats-${stamp()}.csv`, 'text/csv');
-  status('CSV exportado.');
-}
-function sanitizeCsv(s) {
-  // Envolver em aspas se necessário
-  if (s.includes(',') || s.includes('"') || s.includes('\n')) {
-    return `"${s.replace(/"/g, '""')}"`;
-  }
-  return s;
-}
-
-function exportXML() {
-  // XML agregado: <tag name="..." count="..."/>
-  const startedAt = matchId || nowIso();
-  const durationSec = Math.floor(elapsedMs / 1000);
-
-  let xml = '';
-  xml += '<?xml version="1.0" encoding="UTF-8"?>\n';
-  xml += `<stats generatedAt="${nowIso()}">\n`;
-  xml += `  <match startedAt="${startedAt}" durationSeconds="${durationSec}">\n`;
-  TAGS.forEach(t => {
-    const c = counters[t.key] || 0;
-    xml += `    <tag name="${escapeXml(t.label)}" key="${t.key}" count="${c}" />\n`;
-  });
-  xml += '  </match>\n';
-  xml += '</stats>\n';
-
-  downloadText(xml, `stats-${stamp()}.xml`, 'application/xml');
-  status('XML exportado.');
-}
-function escapeXml(s) {
-  return s.replace(/&/g,'&amp;')
-          .replace(/</g,'&lt;')
-          .replace(/>/g,'&gt;')
-          .replace(/"/g,'&quot;')
-          .replace(/'/g,'&apos;');
-}
-
-function stamp() {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth()+1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  const hh = String(d.getHours()).padStart(2, '0');
-  const mm = String(d.getMinutes()).padStart(2, '0');
-  const ss = String(d.getSeconds()).padStart(2, '0');
-  return `${y}${m}${day}-${hh}${mm}${ss}`;
-}
-
-function downloadText(content, filename, mime) {
-  const blob = new Blob([content], { type: `${mime};charset=utf-8` });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-}
-
-// ======= Status UI =======
-let statusTimeout = null;
-function status(msg) {
-  if (!statusMsg) return;
-  statusMsg.textContent = msg;
-  clearTimeout(statusTimeout);
-  statusTimeout = setTimeout(() => statusMsg.textContent = '', 3000);
-}
-
-// ======= Controles =======
-toggleBtn.addEventListener('click', () => {
-  if (running) stopTimer(); else startTimer();
 });
-resetBtn.addEventListener('click', () => resetTimerAndCounts(true));
-exportCsvBtn.addEventListener('click', exportCSV);
-exportXmlBtn.addEventListener('click', exportXML);
-
-// ======= Boot =======
-(function init() {
-  loadState();
-  ensureCounters();
-  buildButtons();
-  updateAllCounts();
-  timerDisplay.textContent = formatMMSS(elapsedMs);
-  if (running) startTimer();
-  if (!matchId) matchId = nowIso();
-  saveState();
-})();
