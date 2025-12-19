@@ -1,79 +1,148 @@
-:root {
-  --gap: 16px;
-  --gap-lg: 20px;
-  --bg: #0b1020;
-  --panel: #121a2b;
-  --text: #e6ebf5;
-  --muted: #9fb0cf;
+:root{
+  --bg:#0b0f14;
+  --panel:#11161d;
+  --panel-2:#151c24;
+  --text:#eaf1ff;
+  --muted:#a9b4c2;
 
-  --btn: #1f2a44;
-  --btn-text: #e6ebf5;
-  --btn-accent: #0ea5e9;
+  --lec:#1fbf66;        /* verde LEC */
+  --lec-alt:#17a457;    /* variação */
+  --adv:#e64a4a;        /* vermelho ADV */
+  --adv-alt:#c73e3e;    /* variação */
 
-  --radius: 12px;
+  --blue:#2f80ed;
+  --orange:#ff8a3d;
+  --green:#27ae60;
+
+  --gap:14px;
+  --radius:14px;
 }
 
-body {
-  margin: 0;
-  background: var(--bg);
-  color: var(--text);
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+*{ box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
+html,body{ height:100%; }
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Ubuntu,"Helvetica Neue",Arial,sans-serif;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  display:flex; flex-direction:column;
 }
 
-.header {
-  display: grid;
-  gap: var(--gap);
-  padding: var(--gap-lg);
-  background: var(--panel);
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+.topbar{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:12px 14px;
+  background:linear-gradient(180deg, #0e141b 0%, #0b0f14 100%);
+  border-bottom:1px solid #1a2330;
+}
+.title{ font-size:16px; color:var(--muted); }
+
+.timer-controls{ display:flex; align-items:center; gap:12px; }
+.timer-display{
+  font-variant-numeric: tabular-nums;
+  font-size:24px; font-weight:700; background:var(--panel); padding:8px 12px; border-radius:10px;
+  border:1px solid #1f2a38;
+}
+.timer-buttons .btn{ margin-left:8px; }
+
+.btn{
+  padding:10px 14px; border-radius:10px; border:none; font-weight:700; color:#fff; cursor:pointer;
+}
+.btn.primary{ background:var(--blue); }
+.btn.ghost{ background:transparent; color:var(--muted); border:1px solid #2a3648; }
+.btn.export{ background:#263446; border:1px solid #2f3f54; color:#d5e2f3; }
+
+.split{
+  display:grid; grid-template-columns:1fr 1fr; gap:var(--gap);
+  padding:var(--gap);
+  flex:1; min-height:0;
 }
 
-.period-controls {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: var(--gap);
+.team-col{
+  background:var(--panel-2);
+  border:1px solid #1a2330; border-radius:var(--radius);
+  display:flex; flex-direction:column; gap:var(--gap);
+  padding:var(--gap);
+  min-height:0;
+}
+.team-col.lec{ box-shadow: inset 0 0 0 2px rgba(31,191,102,0.15); }
+.team-col.adv{ box-shadow: inset 0 0 0 2px rgba(230,74,74,0.15); }
+
+.team-header{
+  margin:0;
+  font-size:20px;
+  letter-spacing:2px;
+  text-align:center;
+  padding:8px 0;
+  border-radius:10px;
+  background:#0e141b;
+  border:1px solid #1f2a38;
 }
 
-.period-label {
-  text-align: center;
-  font-weight: 700;
-  color: var(--muted);
-  margin-top: 4px;
+.section{ display:flex; flex-direction:column; gap:10px; }
+.section-title{
+  margin:0; font-size:14px; font-weight:800; color:#c5d3e6; text-transform:uppercase; letter-spacing:1px;
 }
 
-.timer-area {
-  display: grid;
-  justify-items: center;
-  align-content: center;
-  gap: 8px;
-  padding: 8px 0;
+/* GRID 2x3 grande */
+.grid-2x3{
+  display:grid; grid-template-columns:repeat(3, 1fr); gap:12px;
 }
 
-.timer-display {
-  font-size: clamp(32px, 6vw, 56px);
-  font-weight: 800;
-  letter-spacing: 1px;
+.cell-btn{
+  position:relative;
+  display:flex; align-items:center; justify-content:center;
+  width:100%;
+  aspect-ratio: 1 / 1; /* torna quadrado */
+  border-radius:12px;
+  border:1px solid #223044;
+  color:#fff; font-weight:800; font-size:20px;
+  cursor:pointer;
+  transition: transform .06s ease, filter .15s ease;
+}
+.cell-btn.zone.lec{ background: linear-gradient(180deg, var(--lec) 0%, var(--lec-alt) 100%); }
+.cell-btn.zone.lec.alt{ background: linear-gradient(180deg, #18b66f 0%, #12995f 100%); }
+.cell-btn.zone.adv{ background: linear-gradient(180deg, var(--adv) 0%, var(--adv-alt) 100%); }
+.cell-btn.zone.adv.alt{ background: linear-gradient(180deg, #f05c5c 0%, #cc4f4f 100%); }
+.cell-btn:active{ transform: scale(0.98); filter: brightness(0.95); }
+
+.badge{
+  position:absolute; top:8px; right:8px;
+  background:rgba(2,10,22,0.5);
+  border:1px solid rgba(255,255,255,0.25);
+  padding:2px 8px; border-radius:999px; font-size:14px; font-weight:800;
 }
 
-.btn {
-  background: var(--btn);
-  color: var(--btn-text);
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: var(--radius);
-  padding: 14px 12px;
-  font-size: clamp(14px, 1.8vw, 16px);
-  font-weight: 600;
-  cursor: pointer;
+.actions{
+  display:grid; grid-template-columns:1fr; gap:12px;
 }
-
-.btn:hover { filter: brightness(1.06); }
-.btn:active { transform: translateY(1px); }
-
-.btn-small { padding: 10px 8px; font-size: 14px; }
-.btn-timer {
-  width: min(460px, 90%);
-  padding: 16px 18px;
-  background: var(--btn-accent);
-  color: #05121a;
-  font-size: clamp(16px, 2.4vw, 18px);
+.action-btn{
+  position:relative;
+  width:100%; min-height:72px;
+  border-radius:14px; border:1px solid #223044; color:#fff;
+  font-size:18px; font-weight:900; letter-spacing:0.5px;
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer; transition: transform .06s ease, filter .15s ease;
 }
+.action-btn .badge{ top:10px; right:10px; }
+.action-btn:active{ transform:scale(0.985); filter:brightness(0.95); }
+
+.action-btn.green{ background:linear-gradient(180deg, #2ecc71 0%, #27ae60 100%); }
+.action-btn.blue{ background:linear-gradient(180deg, #4aa3ff 0%, #2f80ed 100%); }
+.action-btn.orange{ background:linear-gradient(180deg, #ff9f50 0%, #ff8a3d 100%); }
+
+.bottombar{
+  padding:10px var(--gap);
+  border-top:1px solid #1a2330;
+  display:flex; justify-content:center;
+}
+.export-group{ display:flex; gap:12px; width:100%; }
+.export-group .btn{ flex:1; }
+
+/* Responsivo mínimo: se a tela ficar muito estreita, ainda tentamos manter 2 colunas.
+   Se precisar, remova os comentários abaixo para empilhar. */
+/*
+@media (max-width: 720px){
+  .split{ grid-template-columns:1fr; }
+}
+*/
