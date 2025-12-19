@@ -3,102 +3,114 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Juega10 HUD</title>
-
-  <meta name="theme-color" content="#0ea5e9" />
-  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#0b0f14" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <link rel="apple-touch-icon" href="./icons/icon-180.png">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-
-  <link rel="stylesheet" href="./styles.css">
+  <link rel="manifest" href="./manifest.json" />
+  <title>Juega10 HUD - LEC x ADV</title>
+  <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
-  <div class="app">
-    <header class="header">
-  <div class="period-controls">
-    <button class="btn btn-small" id="btnStartHT1">INÍCIO 1°T</button>
-    <button class="btn btn-small" id="btnEndHT1">FINAL 1°T</button>
-    <button class="btn btn-small" id="btnStartHT2">INÍCIO 2°T</button>
-    <button class="btn btn-small" id="btnEndHT2">FINAL 2°T</button>
-  </div>
+  <header class="topbar">
+    <div class="title">
+      <strong>Juega10 HUD</strong> — LEC x ADV
+    </div>
+    <div class="timer-controls">
+      <div class="timer-display" id="timerDisplay">00:00</div>
+      <div class="timer-buttons">
+        <button id="btnStartPause" class="btn primary">INICIAR</button>
+        <button id="btnReset" class="btn ghost">ZERAR</button>
+      </div>
+    </div>
+  </header>
 
-  <div class="timer-area">
-    <div class="period-label" id="periodLabel">1°T</div>
-    <div class="timer-display" id="timerDisplay">00:00</div>
-    <button class="btn btn-timer" id="btnTimer">INICIAR CRONÔMETRO</button>
-  </div>
-</header>
+  <main class="split">
+    <!-- LADO ESQUERDO: LEC -->
+    <section class="team-col lec" data-team="LEC">
+      <h2 class="team-header">LEC</h2>
 
-    <main class="board">
-      <section class="team-col">
-        <h2 class="team-title lec">LEC</h2>
-
-        <h3 class="section-title">Finalizações</h3>
-        <div class="zone-grid" data-team="LEC" data-type="finalizacao">
-          <button class="zone lec" data-zone="1">Z1 <span class="count">0</span></button>
-          <button class="zone lec" data-zone="2">Z2 <span class="count">0</span></button>
-          <button class="zone lec" data-zone="3">Z3 <span class="count">0</span></button>
-          <button class="zone lec" data-zone="4">Z4 <span class="count">0</span></button>
-          <button class="zone lec" data-zone="5">Z5 <span class="count">0</span></button>
-          <button class="zone lec" data-zone="6">Z6 <span class="count">0</span></button>
+      <div class="section">
+        <h3 class="section-title">FINALIZAÇÕES</h3>
+        <div class="grid-2x3">
+          <!-- 6 botões (2 linhas x 3 colunas) -->
+          <button class="cell-btn zone lec" data-team="LEC" data-category="finalizacoes" data-id="F1"><span>F1</span><b class="badge" id="LEC_finalizacoes_F1">0</b></button>
+          <button class="cell-btn zone lec" data-team="LEC" data-category="finalizacoes" data-id="F2"><span>F2</span><b class="badge" id="LEC_finalizacoes_F2">0</b></button>
+          <button class="cell-btn zone lec" data-team="LEC" data-category="finalizacoes" data-id="F3"><span>F3</span><b class="badge" id="LEC_finalizacoes_F3">0</b></button>
+          <button class="cell-btn zone lec" data-team="LEC" data-category="finalizacoes" data-id="F4"><span>F4</span><b class="badge" id="LEC_finalizacoes_F4">0</b></button>
+          <button class="cell-btn zone lec" data-team="LEC" data-category="finalizacoes" data-id="F5"><span>F5</span><b class="badge" id="LEC_finalizacoes_F5">0</b></button>
+          <button class="cell-btn zone lec" data-team="LEC" data-category="finalizacoes" data-id="F6"><span>F6</span><b class="badge" id="LEC_finalizacoes_F6">0</b></button>
         </div>
+      </div>
 
-        <h3 class="section-title">Entradas no Último Terço</h3>
-        <div class="zone-grid" data-team="LEC" data-type="entrada">
-          <button class="zone lec" data-zone="1">Z1 <span class="count">0</span></button>
-          <button class="zone lec" data-zone="2">Z2 <span class="count">0</span></button>
-          <button class="zone lec" data-zone="3">Z3 <span class="count">0</span></button>
-          <button class="zone lec" data-zone="4">Z4 <span class="count">0</span></button>
-          <button class="zone lec" data-zone="5">Z5 <span class="count">0</span></button>
-          <button class="zone lec" data-zone="6">Z6 <span class="count">0</span></button>
+      <div class="section">
+        <h3 class="section-title">ENTRADAS NO ÚLTIMO TERÇO</h3>
+        <div class="grid-2x3">
+          <button class="cell-btn zone lec alt" data-team="LEC" data-category="ultimo_terco" data-id="E1"><span>E1</span><b class="badge" id="LEC_ultimo_terco_E1">0</b></button>
+          <button class="cell-btn zone lec alt" data-team="LEC" data-category="ultimo_terco" data-id="E2"><span>E2</span><b class="badge" id="LEC_ultimo_terco_E2">0</b></button>
+          <button class="cell-btn zone lec alt" data-team="LEC" data-category="ultimo_terco" data-id="E3"><span>E3</span><b class="badge" id="LEC_ultimo_terco_E3">0</b></button>
+          <button class="cell-btn zone lec alt" data-team="LEC" data-category="ultimo_terco" data-id="E4"><span>E4</span><b class="badge" id="LEC_ultimo_terco_E4">0</b></button>
+          <button class="cell-btn zone lec alt" data-team="LEC" data-category="ultimo_terco" data-id="E5"><span>E5</span><b class="badge" id="LEC_ultimo_terco_E5">0</b></button>
+          <button class="cell-btn zone lec alt" data-team="LEC" data-category="ultimo_terco" data-id="E6"><span>E6</span><b class="badge" id="LEC_ultimo_terco_E6">0</b></button>
         </div>
+      </div>
 
-        <div class="action-buttons" id="actions-lec"></div>
-      </section>
-
-      <section class="team-col">
-        <h2 class="team-title adv">ADV</h2>
-
-        <h3 class="section-title">Finalizações</h3>
-        <div class="zone-grid" data-team="ADV" data-type="finalizacao">
-          <button class="zone adv" data-zone="1">Z1 <span class="count">0</span></button>
-          <button class="zone adv" data-zone="2">Z2 <span class="count">0</span></button>
-          <button class="zone adv" data-zone="3">Z3 <span class="count">0</span></button>
-          <button class="zone adv" data-zone="4">Z4 <span class="count">0</span></button>
-          <button class="zone adv" data-zone="5">Z5 <span class="count">0</span></button>
-          <button class="zone adv" data-zone="6">Z6 <span class="count">0</span></button>
+      <div class="section">
+        <h3 class="section-title">AÇÕES</h3>
+        <div class="actions">
+          <button class="action-btn green" data-team="LEC" data-category="acao" data-id="GOL"><span>GOL</span><b class="badge" id="LEC_acao_GOL">0</b></button>
+          <button class="action-btn blue" data-team="LEC" data-category="acao" data-id="ESC"><span>ESCANTEIO</span><b class="badge" id="LEC_acao_ESC">0</b></button>
+          <button class="action-btn orange" data-team="LEC" data-category="acao" data-id="FAL"><span>FALTA</span><b class="badge" id="LEC_acao_FAL">0</b></button>
         </div>
+      </div>
+    </section>
 
-        <h3 class="section-title">Entradas no Último Terço</h3>
-        <div class="zone-grid" data-team="ADV" data-type="entrada">
-          <button class="zone adv" data-zone="1">Z1 <span class="count">0</span></button>
-          <button class="zone adv" data-zone="2">Z2 <span class="count">0</span></button>
-          <button class="zone adv" data-zone="3">Z3 <span class="count">0</span></button>
-          <button class="zone adv" data-zone="4">Z4 <span class="count">0</span></button>
-          <button class="zone adv" data-zone="5">Z5 <span class="count">0</span></button>
-          <button class="zone adv" data-zone="6">Z6 <span class="count">0</span></button>
+    <!-- LADO DIREITO: ADV -->
+    <section class="team-col adv" data-team="ADV">
+      <h2 class="team-header">ADV</h2>
+
+      <div class="section">
+        <h3 class="section-title">FINALIZAÇÕES</h3>
+        <div class="grid-2x3">
+          <button class="cell-btn zone adv" data-team="ADV" data-category="finalizacoes" data-id="F1"><span>F1</span><b class="badge" id="ADV_finalizacoes_F1">0</b></button>
+          <button class="cell-btn zone adv" data-team="ADV" data-category="finalizacoes" data-id="F2"><span>F2</span><b class="badge" id="ADV_finalizacoes_F2">0</b></button>
+          <button class="cell-btn zone adv" data-team="ADV" data-category="finalizacoes" data-id="F3"><span>F3</span><b class="badge" id="ADV_finalizacoes_F3">0</b></button>
+          <button class="cell-btn zone adv" data-team="ADV" data-category="finalizacoes" data-id="F4"><span>F4</span><b class="badge" id="ADV_finalizacoes_F4">0</b></button>
+          <button class="cell-btn zone adv" data-team="ADV" data-category="finalizacoes" data-id="F5"><span>F5</span><b class="badge" id="ADV_finalizacoes_F5">0</b></button>
+          <button class="cell-btn zone adv" data-team="ADV" data-category="finalizacoes" data-id="F6"><span>F6</span><b class="badge" id="ADV_finalizacoes_F6">0</b></button>
         </div>
+      </div>
 
-        <div class="action-buttons" id="actions-adv"></div>
-      </section>
-    </main>
+      <div class="section">
+        <h3 class="section-title">ENTRADAS NO ÚLTIMO TERÇO</h3>
+        <div class="grid-2x3">
+          <button class="cell-btn zone adv alt" data-team="ADV" data-category="ultimo_terco" data-id="E1"><span>E1</span><b class="badge" id="ADV_ultimo_terco_E1">0</b></button>
+          <button class="cell-btn zone adv alt" data-team="ADV" data-category="ultimo_terco" data-id="E2"><span>E2</span><b class="badge" id="ADV_ultimo_terco_E2">0</b></button>
+          <button class="cell-btn zone adv alt" data-team="ADV" data-category="ultimo_terco" data-id="E3"><span>E3</span><b class="badge" id="ADV_ultimo_terco_E3">0</b></button>
+          <button class="cell-btn zone adv alt" data-team="ADV" data-category="ultimo_terco" data-id="E4"><span>E4</span><b class="badge" id="ADV_ultimo_terco_E4">0</b></button>
+          <button class="cell-btn zone adv alt" data-team="ADV" data-category="ultimo_terco" data-id="E5"><span>E5</span><b class="badge" id="ADV_ultimo_terco_E5">0</b></button>
+          <button class="cell-btn zone adv alt" data-team="ADV" data-category="ultimo_terco" data-id="E6"><span>E6</span><b class="badge" id="ADV_ultimo_terco_E6">0</b></button>
+        </div>
+      </div>
 
-    <footer class="footer">
-      <button id="btn-export-csv" class="export">Exportar CSV</button>
-      <button id="btn-export-xml" class="export">Exportar XML</button>
-      <button id="btn-clear" class="danger">Limpar Dados</button>
-    </footer>
-  </div>
+      <div class="section">
+        <h3 class="section-title">AÇÕES</h3>
+        <div class="actions">
+          <button class="action-btn green" data-team="ADV" data-category="acao" data-id="GOL"><span>GOL</span><b class="badge" id="ADV_acao_GOL">0</b></button>
+          <button class="action-btn blue" data-team="ADV" data-category="acao" data-id="ESC"><span>ESCANTEIO</span><b class="badge" id="ADV_acao_ESC">0</b></button>
+          <button class="action-btn orange" data-team="ADV" data-category="acao" data-id="FAL"><span>FALTA</span><b class="badge" id="ADV_acao_FAL">0</b></button>
+        </div>
+      </div>
+    </section>
+  </main>
 
-  <script src="./app.js" defer></script>
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./service-worker.js')
-          .catch(err => console.error('Falha SW:', err));
-      });
-    }
-  </script>
+  <footer class="bottombar">
+    <div class="export-group">
+      <button id="btnExportCSV" class="btn export">EXPORTAR CSV</button>
+      <button id="btnExportXML" class="btn export">EXPORTAR XML</button>
+    </div>
+  </footer>
+
+  <script src="./app.js"></script>
 </body>
 </html>
