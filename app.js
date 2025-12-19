@@ -1,296 +1,303 @@
-// ============ CONFIG PERSONALIZÁVEL ============
-const TEAM_CONFIG = {
-  LEC: {
-    actions: [
-      { key: 'gol',       label: 'GOL',        color: '#16a34a' }, // verde
-      { key: 'escanteio', label: 'ESCANTEIO',  color: '#0ea5e9' }, // azul
-      { key: 'falta',     label: 'FALTA',      color: '#f59e0b' }  // amarelo
-    ],
-    color: '#16a34a'
-  },
-  ADV: {
-    actions: [
-      { key: 'gol',       label: 'GOL',        color: '#ef4444' }, // vermelho
-      { key: 'escanteio', label: 'ESCANTEIO',  color: '#8b5cf6' }, // roxo
-      { key: 'falta',     label: 'FALTA',      color: '#f97316' }  // laranja
-    ],
-    color: '#ef4444'
-  }
+// ====== CONFIGURAÇÕES ======
+const CLIP_BEFORE = 25; // segundos antes
+const CLIP_AFTER = 10;  // segundos depois
+
+// IDs e rótulos para CSV e contadores
+const GRID_IDS = ["1","2","3","4","5","6"];
+const ACTION_IDS = [
+  { id:"GOL", label:"Gol" },
+  { id:"ESC", label:"Escanteio" },
+  { id:"FAL", label:"Falta" }
+];
+
+const TEAMS = ["LEC","ADV"];
+
+// ====== ESTADO ======
+let isRunning = false;
+let startEpoch = 0;     // ms (Date.now()) quando iniciou/retomou
+let elapsedMs = 0;      // ms acumulados quando pausado
+let rafHandle = null;
+
+const counts = {
+  LEC: { finalizacoes: initGridCounts(), ultimo_terco: initGridCounts(), acao: initActionCounts() },
+  ADV: { finalizacoes: initGridCounts(), ultimo_terco: initGridCounts(), acao: initActionCounts() }
 };
 
-const CLIP_BACK_SECONDS = 25; // -25s
-const CLIP_FWD_SECONDS  = 10; // +10s
-// ==============================================
+// Eventos brutos para exportar XML
+const events = []; // {team,category,id,label,timeSec,clipStart,clipEnd,createdAtISO}
 
-const state = {
-  currentPeriod: '1°T',
-  isRunning: true,
-  timerSeconds: 0,
-  intervalId: null,
-  // contagens por equipe, tipo e zona/botão
-  counts: {
-    LEC: { finalizacao: initZones(), entrada: initZones(), actions: {} },
-    ADV: { finalizacao: initZones(), entrada: initZones(), actions: {} }
-  },
-  // eventos completos para exportação XML
-  events: []
-};
-
-function initZones(){
-  const z = {};
-  for (let i=1;i<=6;i++) z[i]=0;
-  return z;
+function initGridCounts(){
+  // retorna {F1:0..F6:0} ou {E1:0..E6:0} conforme uso
+  return {};
+}
+function initActionCounts(){
+  // {GOL:0, ESC:0, FAL:0}
+  const obj = {};
+  ACTION_IDS.forEach(a => obj[a.id] = 0);
+  return obj;
 }
 
-function pad(n){ return String(n).padStart(2,'0'); }
-function mmssFrom(sec){
-  const m = Math.floor(sec/60), s = sec%60;
-  return `${pad(m)}:${pad(s)}`;
-}
-function nowISO(){ return new Date().toISOString(); }
+// ====== INICIALIZAÇÃO ======
+document.addEventListener("DOMContentLoaded", () => {
+  // Criar mapas F1..F6 e E1..E6 dinamicamente
+  GRID_IDS.forEach((n) => {
+    counts.LEC.finalizacoes["F"+n] = 0;
+    counts.LEC.ultimo_terco["E"+n] = 0;
+    counts.ADV.finalizacoes["F"+n] = 0;
+    counts.ADV.ultimo_terco["E"+n] = 0;
+  });
 
-function saveLocal(){
-  localStorage.setItem('hud_state', JSON.stringify({
-    currentPeriod: state.currentPeriod,
-    isRunning: state.isRunning,
-    timerSeconds: state.timerSeconds,
-    counts: state.counts,
-    events: state.events
-  }));
+  wireTimer();
+  wireButtons();
+  registerServiceWorker();
+});
+
+function wireTimer(){
+  const display = document.getElementById("timerDisplay");
+  const btnStartPause = document.getElementById("btnStartPause");
+  const btnReset = document.getElementById("btnReset");
+
+  updateTimerDisplay(display, 0);
+
+  btnStartPause.addEventListener("click", () => {
+    if(!isRunning){
+      // iniciar/retomar
+      isRunning = true;
+      startEpoch = Date.now() - elapsedMs;
+      btnStartPause.textContent = elapsedMs > 0 ? "PAUSAR" : "PAUSAR";
+      loop(display);
+    }else{
+      // pausar
+      isRunning = false;
+      elapsedMs = Date.now() - startEpoch;
+      btnStartPause.textContent = "RETOMAR";
+      if(rafHandle) cancelAnimationFrame(rafHandle);
+    }
+  });
+
+  btnReset.addEventListener("click", () => {
+    isRunning = false;
+    elapsedMs = 0;
+    startEpoch = 0;
+    if(rafHandle) cancelAnimationFrame(rafHandle);
+    updateTimerDisplay(display, 0);
+    btnStartPause.textContent = "INICIAR";
+
+    // opcional: resetar contadores e eventos? Não. Zera só o relógio.
+    // Se quiser zerar também contadores/eventos, descomente:
+    // resetAllCountsAndEvents();
+  });
 }
-function loadLocal(){
-  const raw = localStorage.getItem('hud_state');
-  if(!raw) return;
-  try{
-    const data = JSON.parse(raw);
-    Object.assign(state, {
-      currentPeriod: data.currentPeriod ?? '1°T',
-      isRunning: data.isRunning ?? false,
-      timerSeconds: data.timerSeconds ?? 0,
-      counts: data.counts ?? state.counts,
-      events: data.events ?? []
+
+function loop(display){
+  if(!isRunning) return;
+  const now = Date.now();
+  const ms = now - startEpoch;
+  updateTimerDisplay(display, ms);
+  rafHandle = requestAnimationFrame(() => loop(display));
+}
+
+function updateTimerDisplay(el, ms){
+  const totalSec = Math.floor(ms/1000);
+  const m = Math.floor(totalSec/60);
+  const s = totalSec % 60;
+  el.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+
+// ====== CLICK HANDLERS ======
+function wireButtons(){
+  // Todos os botões do tabuleiro (finalizações e último terço)
+  document.querySelectorAll(".cell-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const team = btn.dataset.team;
+      const category = btn.dataset.category; // "finalizacoes" | "ultimo_terco"
+      const id = btn.dataset.id;             // "F1"..F6 | "E1"..E6
+      const label = labelFor(category, id);
+
+      incrementCounter(team, category, id);
+      stampEvent(team, category, id, label);
+      flash(btn);
     });
-  }catch(e){ console.warn('Falha ao carregar localStorage', e); }
+  });
+
+  // Botões de ação (3 por equipe)
+  document.querySelectorAll(".action-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const team = btn.dataset.team;
+      const category = btn.dataset.category; // "acao"
+      const id = btn.dataset.id;             // "GOL" | "ESC" | "FAL"
+      const label = labelFor(category, id);
+
+      incrementCounter(team, category, id);
+      stampEvent(team, category, id, label);
+      flash(btn);
+    });
+  });
+
+  // Exportações
+  document.getElementById("btnExportCSV").addEventListener("click", exportCSV);
+  document.getElementById("btnExportXML").addEventListener("click", exportXML);
 }
 
-function startTimer(){
-  if(state.intervalId) return;
-  state.isRunning = true;
-  state.intervalId = setInterval(()=>{
-    state.timerSeconds++;
-    renderTimer();
-  }, 1000);
-  renderTimer();
-  saveLocal();
-}
-function stopTimer(){
-  if(state.intervalId){
-    clearInterval(state.intervalId);
-    state.intervalId = null;
+function labelFor(category,id){
+  if(category === "finalizacoes") return `Finalizações ${id}`;
+  if(category === "ultimo_terco") return `Entradas Últ. Terço ${id}`;
+  if(category === "acao"){
+    const found = ACTION_IDS.find(a => a.id === id);
+    return found ? found.label : id;
   }
-  state.isRunning = false;
-  renderTimer();
-  saveLocal();
-}
-function resetTimer(){
-  stopTimer();
-  state.timerSeconds = 0;
-  renderTimer();
-  saveLocal();
+  return id;
 }
 
-function setPeriod(p){ state.currentPeriod = p; renderTimer(); saveLocal(); }
-
-function renderTimer(){
-  document.getElementById('current-period').textContent = state.currentPeriod;
-  document.getElementById('timer').textContent = mmssFrom(state.timerSeconds);
-  document.getElementById('btn-toggle').textContent = state.isRunning ? 'Pausar' : 'Continuar';
-}
-
-function clampZero(n){ return n < 0 ? 0 : n; }
-
-function registerEvent({team, type, zone=null, actionKey=null}){
-  // contagem
-  if(type === 'finalizacao' || type === 'entrada'){
-    state.counts[team][type][zone] += 1;
-  } else if(type === 'action' && actionKey){
-    state.counts[team].actions[actionKey] = (state.counts[team].actions[actionKey]||0)+1;
+function getCurrentTimeSeconds(){
+  if(isRunning){
+    return (Date.now() - startEpoch) / 1000;
+  }else{
+    return elapsedMs / 1000;
   }
-
-  // evento para XML
-  const t = state.timerSeconds;
-  const clipStart = clampZero(t - CLIP_BACK_SECONDS);
-  const clipEnd   = t + CLIP_FWD_SECONDS;
-
-  state.events.push({
-    timestampISO: nowISO(),
-    period: state.currentPeriod,
-    timer: mmssFrom(t),
-    timerSeconds: t,
-    team,
-    type,
-    zone,
-    actionKey,
-    clipStartSec: clipStart,
-    clipEndSec: clipEnd,
-    clipStart: mmssFrom(clipStart),
-    clipEnd: mmssFrom(clipEnd)
-  });
-
-  saveLocal();
 }
 
-function setupActions(){
-  // Renderiza 3 botões por equipe a partir do TEAM_CONFIG
-  ['LEC','ADV'].forEach(team=>{
-    const container = document.getElementById(team === 'LEC' ? 'actions-lec' : 'actions-adv');
-    container.innerHTML = '';
-    TEAM_CONFIG[team].actions.forEach(cfg=>{
-      // inicializa contador
-      if(state.counts[team].actions[cfg.key] == null) state.counts[team].actions[cfg.key] = 0;
-
-      const btn = document.createElement('button');
-      btn.className = 'action-btn';
-      btn.style.background = cfg.color;
-
-      btn.innerHTML = `
-        <span class="label">${cfg.label}</span>
-        <span class="counter" data-team="${team}" data-key="${cfg.key}">${state.counts[team].actions[cfg.key]}</span>
-      `;
-
-      btn.addEventListener('click', ()=>{
-        if(!state.isRunning) return;
-        registerEvent({team, type:'action', actionKey: cfg.key});
-        // atualiza contador visual
-        const counter = btn.querySelector('.counter');
-        counter.textContent = state.counts[team].actions[cfg.key];
-      });
-
-      container.appendChild(btn);
-    });
-  });
+function incrementCounter(team, category, id){
+  if(category === "finalizacoes" || category === "ultimo_terco"){
+    counts[team][category][id] = (counts[team][category][id] || 0) + 1;
+    const badgeId = `${team}_${category}_${id}`;
+    const badgeEl = document.getElementById(badgeId);
+    if(badgeEl) badgeEl.textContent = counts[team][category][id];
+  }else if(category === "acao"){
+    counts[team][category][id] = (counts[team][category][id] || 0) + 1;
+    const badgeId = `${team}_${category}_${id}`;
+    const badgeEl = document.getElementById(badgeId);
+    if(badgeEl) badgeEl.textContent = counts[team][category][id];
+  }
 }
 
-function setupZones(){
-  // Anexa listeners aos 24 botões de zona (12 por equipe)
-  document.querySelectorAll('.zone-grid').forEach(grid=>{
-    const team = grid.dataset.team; // 'LEC' ou 'ADV'
-    const type = grid.dataset.type; // 'finalizacao' ou 'entrada'
-    grid.querySelectorAll('.zone').forEach(btn=>{
-      const zone = Number(btn.dataset.zone);
-      // desenha contagem inicial
-      const countSpan = btn.querySelector('.count');
-      countSpan.textContent = state.counts[team][type][zone];
+function stampEvent(team, category, id, label){
+  const t = getCurrentTimeSeconds();
+  const clipStart = Math.max(0, t - CLIP_BEFORE);
+  const clipEnd = t + CLIP_AFTER;
+  const createdAtISO = new Date().toISOString();
 
-      btn.addEventListener('click', ()=>{
-        if(!state.isRunning) return;
-        registerEvent({team, type, zone});
-        countSpan.textContent = state.counts[team][type][zone];
-      });
-    });
-  });
+  events.push({ team, category, id, label, timeSec: round1(t), clipStart: round1(clipStart), clipEnd: round1(clipEnd), createdAt: createdAtISO });
 }
 
+function round1(x){ return Math.round(x*10)/10; }
+
+function flash(el){
+  el.classList.add("flash");
+  setTimeout(()=> el.classList.remove("flash"), 150);
+}
+
+// ====== EXPORTS ======
 function exportCSV(){
-  // CSV com contadores agregados por equipe/evento/zone-OU-ação
-  const rows = [];
-  rows.push(['team','event','category','id','count']);
-  ['LEC','ADV'].forEach(team=>{
-    // Finalizações por zona 1..6
-    for(let z=1; z<=6; z++){
-      rows.push([team, 'finalizacao', 'zona', String(z), String(state.counts[team].finalizacao[z])]);
-    }
-    // Entradas por zona 1..6
-    for(let z=1; z<=6; z++){
-      rows.push([team, 'entrada', 'zona', String(z), String(state.counts[team].entrada[z])]);
-    }
-    // Ações
-    const actions = TEAM_CONFIG[team].actions;
-    actions.forEach(a=>{
-      rows.push([team, 'action', 'botao', a.key, String(state.counts[team].actions[a.key]||0)]);
+  // CSV como contador por evento (alto e direto)
+  // Colunas: team,category,id,label,count
+  const lines = [];
+  lines.push(["team","category","id","label","count"].join(","));
+
+  TEAMS.forEach(team => {
+    // finalizacoes F1..F6
+    GRID_IDS.forEach(n => {
+      const id = "F"+n;
+      const count = counts[team].finalizacoes[id] || 0;
+      lines.push([team,"finalizacoes",id,labelFor("finalizacoes",id),count].join(","));
+    });
+    // ultimo_terco E1..E6
+    GRID_IDS.forEach(n => {
+      const id = "E"+n;
+      const count = counts[team].ultimo_terco[id] || 0;
+      lines.push([team,"ultimo_terco",id,labelFor("ultimo_terco",id),count].join(","));
+    });
+    // acoes
+    ACTION_IDS.forEach(a => {
+      const id = a.id;
+      const count = counts[team].acao[id] || 0;
+      lines.push([team,"acao",id,labelFor("acao",id),count].join(","));
     });
   });
 
-  const csv = rows.map(r => r.map(cell => `"${String(cell).replace(/"/g,'""')}"`).join(',')).join('\n');
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = `juega10_counts_${new Date().toISOString().slice(0,10)}.csv`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+  const csv = lines.join("\n");
+  downloadFile(csv, `contadores_lec_adv_${dateStamp()}.csv`, "text/csv");
 }
 
 function exportXML(){
-  // XML com todos os eventos e faixas de clip
-  const esc = (s)=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  let xml = `<?xml version="1.0" encoding="UTF-8"?>\n<match>\n`;
-  xml += `  <meta>\n`;
-  xml += `    <generatedAt>${esc(nowISO())}</generatedAt>\n`;
-  xml += `    <period>${esc(state.currentPeriod)}</period>\n`;
-  xml += `  </meta>\n`;
-  xml += `  <events>\n`;
+  // XML de eventos brutos com clipStart/clipEnd
+  const parts = [];
+  parts.push(`<?xml version="1.0" encoding="UTF-8"?>`);
+  parts.push(`<events matchClockFormat="seconds" clipBefore="${CLIP_BEFORE}" clipAfter="${CLIP_AFTER}">`);
 
-  state.events.forEach((ev, idx)=>{
-    xml += `    <event id="${idx+1}" team="${esc(ev.team)}" type="${esc(ev.type)}"${ev.zone?` zone="${ev.zone}"`:''}${ev.actionKey?` actionKey="${esc(ev.actionKey)}"`:''} period="${esc(ev.period)}">\n`;
-    xml += `      <timestampISO>${esc(ev.timestampISO)}</timestampISO>\n`;
-    xml += `      <timer>${esc(ev.timer)}</timer>\n`;
-    xml += `      <clip startSec="${ev.clipStartSec}" endSec="${ev.clipEndSec}" start="${esc(ev.clipStart)}" end="${esc(ev.clipEnd)}" />\n`;
-    xml += `    </event>\n`;
+  events.forEach((e, idx) => {
+    parts.push(`  <event index="${idx+1}" team="${e.team}" category="${e.category}" id="${e.id}">`);
+    parts.push(`    <label>${escapeXml(e.label)}</label>`);
+    parts.push(`    <time>${e.timeSec}</time>`);
+    parts.push(`    <clipStart>${e.clipStart}</clipStart>`);
+    parts.push(`    <clipEnd>${e.clipEnd}</clipEnd>`);
+    parts.push(`    <createdAt>${e.createdAt}</createdAt>`);
+    parts.push(`  </event>`);
   });
 
-  xml += `  </events>\n</match>`;
-
-  const blob = new Blob([xml], { type: 'application/xml;charset=utf-8;' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = `juega10_events_${new Date().toISOString().slice(0,10)}.xml`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+  parts.push(`</events>`);
+  const xml = parts.join("\n");
+  downloadFile(xml, `eventos_lec_adv_${dateStamp()}.xml`, "application/xml");
 }
 
-function clearData(){
-  if(!confirm('Limpar dados locais (contagens e eventos)?')) return;
-  state.currentPeriod = '1°T';
-  state.isRunning = false;
-  state.timerSeconds = 0;
-  state.counts = {
-    LEC: { finalizacao: initZones(), entrada: initZones(), actions: {} },
-    ADV: { finalizacao: initZones(), entrada: initZones(), actions: {} }
-  };
-  state.events = [];
-  stopTimer();
-  renderTimer();
-  // zera contadores na UI
-  document.querySelectorAll('.zone .count').forEach(el=>el.textContent='0');
-  document.querySelectorAll('.action-btn .counter').forEach(el=>el.textContent='0');
-  saveLocal();
+function dateStamp(){
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth()+1).padStart(2,'0');
+  const dd = String(d.getDate()).padStart(2,'0');
+  const hh = String(d.getHours()).padStart(2,'0');
+  const mi = String(d.getMinutes()).padStart(2,'0');
+  const ss = String(d.getSeconds()).padStart(2,'0');
+  return `${yyyy}${mm}${dd}_${hh}${mi}${ss}`;
 }
 
-function bindTopBar(){
-  document.getElementById('btn-inicio-1t').addEventListener('click', ()=>{ setPeriod('1°T'); state.timerSeconds=0; startTimer(); });
-  document.getElementById('btn-final-1t').addEventListener('click', ()=>{ setPeriod('1°T'); stopTimer(); });
-  document.getElementById('btn-inicio-2t').addEventListener('click', ()=>{ setPeriod('2°T'); state.timerSeconds=0; startTimer(); });
-  document.getElementById('btn-final-2t').addEventListener('click', ()=>{ setPeriod('2°T'); stopTimer(); });
-  document.getElementById('btn-toggle').addEventListener('click', ()=>{ state.isRunning ? stopTimer() : startTimer(); });
-  document.getElementById('btn-reset').addEventListener('click', resetTimer);
-  document.getElementById('btn-export-csv').addEventListener('click', exportCSV);
-  document.getElementById('btn-export-xml').addEventListener('click', exportXML);
-  document.getElementById('btn-clear').addEventListener('click', clearData);
+function downloadFile(content, filename, mime){
+  const blob = new Blob([content], {type: mime});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(()=>{
+    URL.revokeObjectURL(url);
+    a.remove();
+  }, 0);
 }
 
-// Inicialização
-loadLocal();
-window.addEventListener('DOMContentLoaded', ()=>{
-  renderTimer();
-  setupActions();
-  setupZones();
-  bindTopBar();
-  if(state.isRunning){ startTimer(); }
-  else { // inicia automaticamente na primeira execução
-    if(state.timerSeconds === 0 && state.events.length===0){
-      startTimer();
-    }
+function escapeXml(unsafe){
+  return unsafe
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
+// ====== SW REGISTRATION ======
+function registerServiceWorker(){
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('./service-worker.js')
+      .catch(err => console.log('SW registration failed', err));
   }
-});
+}
+
+// ====== OPCIONAL: reset total ======
+function resetAllCountsAndEvents(){
+  ["LEC","ADV"].forEach(team => {
+    GRID_IDS.forEach(n => {
+      counts[team].finalizacoes["F"+n]=0;
+      counts[team].ultimo_terco["E"+n]=0;
+      updateBadge(`${team}_finalizacoes_F${n}`,0);
+      updateBadge(`${team}_ultimo_terco_E${n}`,0);
+    });
+    ACTION_IDS.forEach(a => {
+      counts[team].acao[a.id]=0;
+      updateBadge(`${team}_acao_${a.id}`,0);
+    });
+  });
+  events.length = 0;
+}
+function updateBadge(id,val){
+  const el = document.getElementById(id);
+  if(el) el.textContent = val;
+}
