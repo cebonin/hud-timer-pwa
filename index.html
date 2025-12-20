@@ -1,116 +1,85 @@
-<!doctype html>
-<html lang="pt-BR">
+<!DOCTYPE html>
+<html lang="pt-br">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#0b0f14" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <link rel="apple-touch-icon" href="./icons/icon-180.png">
-  <link rel="manifest" href="./manifest.json" />
-  <title>Juega10 HUD - LEC x ADV</title>
-  <link rel="stylesheet" href="./styles.css" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>App de Partida – Layout 2x3</title>
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <header class="topbar">
-    <div class="title">
-      <strong>Juega10 HUD</strong> — LEC x ADV
-    </div>
-    <div class="timer-controls">
-      <div class="timer-display" id="timerDisplay">00:00</div>
-      <div class="timer-buttons">
-        <button id="btnStartPause" class="btn primary">INICIAR</button>
-        <button id="btnReset" class="btn ghost">ZERAR</button>
-      </div>
-    </div>
+  <header class="match-header">
+    <div class="period" id="periodo">1ºT</div>
+    <div class="clock" id="cronometro">00:00</div>
   </header>
 
-  <main class="split">
-    <!-- LADO ESQUERDO: LEC -->
-    <section class="team-col lec" data-team="LEC">
-      <h2 class="team-header">LEC</h2>
-
-      <div class="section">
-        <h3 class="section-title">FINALIZAÇÕES</h3>
-        <div class="grid-2x3">
-          <!-- 6 botões (2 linhas x 3 colunas) -->
-          <button class="cell-btn zone lec" data-team="LEC" data-category="finalizacoes" data-id="F1"><span>F1</span><b class="badge" id="LEC_finalizacoes_F1">0</b></button>
-          <button class="cell-btn zone lec" data-team="LEC" data-category="finalizacoes" data-id="F2"><span>F2</span><b class="badge" id="LEC_finalizacoes_F2">0</b></button>
-          <button class="cell-btn zone lec" data-team="LEC" data-category="finalizacoes" data-id="F3"><span>F3</span><b class="badge" id="LEC_finalizacoes_F3">0</b></button>
-          <button class="cell-btn zone lec" data-team="LEC" data-category="finalizacoes" data-id="F4"><span>F4</span><b class="badge" id="LEC_finalizacoes_F4">0</b></button>
-          <button class="cell-btn zone lec" data-team="LEC" data-category="finalizacoes" data-id="F5"><span>F5</span><b class="badge" id="LEC_finalizacoes_F5">0</b></button>
-          <button class="cell-btn zone lec" data-team="LEC" data-category="finalizacoes" data-id="F6"><span>F6</span><b class="badge" id="LEC_finalizacoes_F6">0</b></button>
-        </div>
+  <main class="content">
+    <!-- 2x2: Botões de tempo (maiores) -->
+    <section class="section time-controls">
+      <h2 class="section-title">Controle de Tempo</h2>
+      <div class="time-grid">
+        <button class="btn btn--time" id="inicio1t" aria-label="Início do primeiro tempo">INÍCIO 1ºT</button>
+        <button class="btn btn--time" id="final1t" aria-label="Final do primeiro tempo">FINAL 1ºT</button>
+        <button class="btn btn--time" id="inicio2t" aria-label="Início do segundo tempo">INÍCIO 2ºT</button>
+        <button class="btn btn--time" id="final2t" aria-label="Final do segundo tempo">FINAL 2ºT</button>
       </div>
+    </section>
 
-      <div class="section">
-        <h3 class="section-title">ENTRADAS NO ÚLTIMO TERÇO</h3>
-        <div class="grid-2x3">
-          <button class="cell-btn zone lec alt" data-team="LEC" data-category="ultimo_terco" data-id="E1"><span>E1</span><b class="badge" id="LEC_ultimo_terco_E1">0</b></button>
-          <button class="cell-btn zone lec alt" data-team="LEC" data-category="ultimo_terco" data-id="E2"><span>E2</span><b class="badge" id="LEC_ultimo_terco_E2">0</b></button>
-          <button class="cell-btn zone lec alt" data-team="LEC" data-category="ultimo_terco" data-id="E3"><span>E3</span><b class="badge" id="LEC_ultimo_terco_E3">0</b></button>
-          <button class="cell-btn zone lec alt" data-team="LEC" data-category="ultimo_terco" data-id="E4"><span>E4</span><b class="badge" id="LEC_ultimo_terco_E4">0</b></button>
-          <button class="cell-btn zone lec alt" data-team="LEC" data-category="ultimo_terco" data-id="E5"><span>E5</span><b class="badge" id="LEC_ultimo_terco_E5">0</b></button>
-          <button class="cell-btn zone lec alt" data-team="LEC" data-category="ultimo_terco" data-id="E6"><span>E6</span><b class="badge" id="LEC_ultimo_terco_E6">0</b></button>
+    <!-- Placar compacto -->
+    <section class="section scoreboard">
+      <div class="score">
+        <div class="team">
+          <span class="team-name">LEC</span>
+          <span class="team-score" id="placarLec">0</span>
         </div>
-      </div>
-
-      <div class="section">
-        <h3 class="section-title">AÇÕES</h3>
-        <div class="actions">
-          <button class="action-btn green" data-team="LEC" data-category="acao" data-id="GOL"><span>GOL</span><b class="badge" id="LEC_acao_GOL">0</b></button>
-          <button class="action-btn blue" data-team="LEC" data-category="acao" data-id="ESC"><span>ESCANTEIO</span><b class="badge" id="LEC_acao_ESC">0</b></button>
-          <button class="action-btn orange" data-team="LEC" data-category="acao" data-id="FAL"><span>FALTA</span><b class="badge" id="LEC_acao_FAL">0</b></button>
+        <div class="vs">x</div>
+        <div class="team">
+          <span class="team-name">ADV</span>
+          <span class="team-score" id="placarAdv">0</span>
         </div>
       </div>
     </section>
 
-    <!-- LADO DIREITO: ADV -->
-    <section class="team-col adv" data-team="ADV">
-      <h2 class="team-header">ADV</h2>
-
-      <div class="section">
-        <h3 class="section-title">FINALIZAÇÕES</h3>
-        <div class="grid-2x3">
-          <button class="cell-btn zone adv" data-team="ADV" data-category="finalizacoes" data-id="F1"><span>F1</span><b class="badge" id="ADV_finalizacoes_F1">0</b></button>
-          <button class="cell-btn zone adv" data-team="ADV" data-category="finalizacoes" data-id="F2"><span>F2</span><b class="badge" id="ADV_finalizacoes_F2">0</b></button>
-          <button class="cell-btn zone adv" data-team="ADV" data-category="finalizacoes" data-id="F3"><span>F3</span><b class="badge" id="ADV_finalizacoes_F3">0</b></button>
-          <button class="cell-btn zone adv" data-team="ADV" data-category="finalizacoes" data-id="F4"><span>F4</span><b class="badge" id="ADV_finalizacoes_F4">0</b></button>
-          <button class="cell-btn zone adv" data-team="ADV" data-category="finalizacoes" data-id="F5"><span>F5</span><b class="badge" id="ADV_finalizacoes_F5">0</b></button>
-          <button class="cell-btn zone adv" data-team="ADV" data-category="finalizacoes" data-id="F6"><span>F6</span><b class="badge" id="ADV_finalizacoes_F6">0</b></button>
-        </div>
+    <!-- Finalizações (área compacta, pronta para diagramas) -->
+    <section class="section shots">
+      <h2 class="section-title">Finalizações</h2>
+      <div class="panel-grid">
+        <div class="panel" id="finalizacoes-left" aria-label="Mapa de finalizações esquerda">Diagrama</div>
+        <div class="panel" id="finalizacoes-right" aria-label="Mapa de finalizações direita">Diagrama</div>
       </div>
+    </section>
 
-      <div class="section">
-        <h3 class="section-title">ENTRADAS NO ÚLTIMO TERÇO</h3>
-        <div class="grid-2x3">
-          <button class="cell-btn zone adv alt" data-team="ADV" data-category="ultimo_terco" data-id="E1"><span>E1</span><b class="badge" id="ADV_ultimo_terco_E1">0</b></button>
-          <button class="cell-btn zone adv alt" data-team="ADV" data-category="ultimo_terco" data-id="E2"><span>E2</span><b class="badge" id="ADV_ultimo_terco_E2">0</b></button>
-          <button class="cell-btn zone adv alt" data-team="ADV" data-category="ultimo_terco" data-id="E3"><span>E3</span><b class="badge" id="ADV_ultimo_terco_E3">0</b></button>
-          <button class="cell-btn zone adv alt" data-team="ADV" data-category="ultimo_terco" data-id="E4"><span>E4</span><b class="badge" id="ADV_ultimo_terco_E4">0</b></button>
-          <button class="cell-btn zone adv alt" data-team="ADV" data-category="ultimo_terco" data-id="E5"><span>E5</span><b class="badge" id="ADV_ultimo_terco_E5">0</b></button>
-          <button class="cell-btn zone adv alt" data-team="ADV" data-category="ultimo_terco" data-id="E6"><span>E6</span><b class="badge" id="ADV_ultimo_terco_E6">0</b></button>
-        </div>
+    <!-- Entradas no último terço (área compacta, pronta para diagramas) -->
+    <section class="section entries">
+      <h2 class="section-title">Entradas no Último Terço</h2>
+      <div class="panel-grid">
+        <div class="panel" id="entradas-left" aria-label="Mapa de entradas esquerda">Diagrama</div>
+        <div class="panel" id="entradas-right" aria-label="Mapa de entradas direita">Diagrama</div>
       </div>
+    </section>
 
-      <div class="section">
-        <h3 class="section-title">AÇÕES</h3>
-        <div class="actions">
-          <button class="action-btn green" data-team="ADV" data-category="acao" data-id="GOL"><span>GOL</span><b class="badge" id="ADV_acao_GOL">0</b></button>
-          <button class="action-btn blue" data-team="ADV" data-category="acao" data-id="ESC"><span>ESCANTEIO</span><b class="badge" id="ADV_acao_ESC">0</b></button>
-          <button class="action-btn orange" data-team="ADV" data-category="acao" data-id="FAL"><span>FALTA</span><b class="badge" id="ADV_acao_FAL">0</b></button>
-        </div>
+    <!-- 2x3: Botões de ação PRINCIPAIS (grandes) -->
+    <section class="section actions">
+      <h2 class="section-title">Ações Rápidas</h2>
+      <div class="actions-grid">
+        <button class="btn btn--xl btn--goal" id="golLec" aria-label="Gol LEC">GOL LEC</button>
+        <button class="btn btn--xl btn--esc-of" id="escOf" aria-label="Escanteio Ofensivo">ESC OF</button>
+        <button class="btn btn--xl btn--fl-of" id="flOf" aria-label="Falta Ofensiva">FL OF</button>
+
+        <button class="btn btn--xl btn--goal-opp" id="golAdv" aria-label="Gol adversário">GOL ADV</button>
+        <button class="btn btn--xl btn--esc-def" id="escDef" aria-label="Escanteio Defensivo">ESC DEF</button>
+        <button class="btn btn--xl btn--fl-def" id="flDef" aria-label="Falta Defensiva">FL DEF</button>
+      </div>
+    </section>
+
+    <!-- Exportações -->
+    <section class="section exports">
+      <div class="export-grid">
+        <button class="btn btn--export" id="exportCsv" aria-label="Exportar CSV">EXPORTAR CSV</button>
+        <button class="btn btn--export" id="exportXml" aria-label="Exportar XML">EXPORTAR XML</button>
       </div>
     </section>
   </main>
 
-  <footer class="bottombar">
-    <div class="export-group">
-      <button id="btnExportCSV" class="btn export">EXPORTAR CSV</button>
-      <button id="btnExportXML" class="btn export">EXPORTAR XML</button>
-    </div>
-  </footer>
-
-  <script src="./app.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>
