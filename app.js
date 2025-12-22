@@ -1,209 +1,222 @@
-// ====== Estado do cronômetro ======
-let running = false;
-let baseStartMs = 0;   // performance.now() no início/reinício
-let accSeconds = 0;   // segundos acumulados quando pausado
-let tickInterval = null;
+// ======= Estado do cronômetro =======
+let isRunning = false;
+let startEpoch = 0;     // ms timestamp quando iniciou/retomou
+let elapsedMs = 0;      // acumulado quando pausado
+let rafId = null;
 
-const periodEl = document.getElementById('period');
-const clockEl  = document.getElementById('clock');
-const btnToggle = document.getElementById('btnToggleTimer');
-const btnReset  = document.getElementById('btnResetTimer');
+const timerDisplay = document.getElementById('timerDisplay');
+const btnToggleTimer = document.getElementById('btnToggleTimer');
+const btnResetTimer = document.getElementById('btnResetTimer');
 
-// ====== Dados dos eventos ======
-let nextId = 0;
-const events = []; // {id, code, start, end, labels[]}
-const counts = {}; // {code: number}
+function formatMMSS(ms){
+  const total = Math.floor(ms / 1000);
+  const mm = Math.floor(total / 60);
+  const ss = total % 60;
+  return `${String(mm).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;
+}
+function currentSeconds(){
+  const ms = isRunning ? (elapsedMs + (Date.now() - startEpoch)) : elapsedMs;
+  return Math.max(0, ms / 1000);
+}
+function tick(){
+  if (!isRunning) return;
+  timerDisplay.textContent = formatMMSS(elapsedMs + (Date.now() - startEpoch));
+  rafId = requestAnimationFrame(tick);
+}
+function startTimer(){
+  if (isRunning) return;
+  startEpoch = Date.now();
+  isRunning = true;
+  btnToggleTimer.textContent = 'Pausar';
+  tick();
+}
+function pauseTimer(){
+  if (!isRunning) return;
+  elapsedMs += Date.now() - startEpoch;
+  isRunning = false;
+  btnToggleTimer.textContent = 'Retomar';
+  if (rafId) cancelAnimationFrame(rafId);
+  timerDisplay.textContent = formatMMSS(elapsedMs);
+}
+function resetTimer(){
+  isRunning = false;
+  elapsedMs = 0;
+  btnToggleTimer.textContent = 'Iniciar';
+  if (rafId) cancelAnimationFrame(rafId);
+  timerDisplay.textContent = '00:00';
+}
 
-// Mapeia todos os códigos que existem (gera contadores e cores no XML/ROWS)
-const EVENT_CODES = [
-  'FIN_LEC','FIN_ADV',
-  'ENT_LAT_LEC','ENT_CEN_LEC','ENT_PROF_LEC',
-  'ENT_LAT_ADV','ENT_CEN_ADV','ENT_PROF_ADV'
+// Botão único: Iniciar → Pausar → Retomar
+btnToggleTimer.addEventListener('click', () => {
+  if (!isRunning && elapsedMs === 0) { startTimer(); return; }
+  if (isRunning) { pauseTimer(); return; }
+  if (!isRunning && elapsedMs > 0) { startTimer(); return; }
+});
+btnResetTimer.addEventListener('click', resetTimer);
+
+// ======= Eventos e contadores =======
+const counts = Object.create(null);
+const events = [];
+
+// Mapa de códigos (ajustável conforme seu software)
+// LEC
+const CODES = [
+  'FIN LEC', 'ESC OF', 'FALTA OF', 'ENT LEC ESQ', 'ENT LEC CEN', 'ENT LEC DIR',
+  // ADV
+  'FIN ADV', 'ESC DEF', 'FALTA DEF', 'ENT ADV ESQ', 'ENT ADV CEN', 'ENT ADV DIR'
 ];
 
-// Inicializa contadores
-EVENT_CODES.forEach(c => counts[c] = 0);
-
-// ====== Util ======
-function formatTimeMMSS(seconds){
-  const s = Math.max(0, Math.floor(seconds));
-  const mm = String(Math.floor(s/60)).padStart(2,'0');
-  const ss = String(s % 60).padStart(2,'0');
-  return `${mm}:${ss}`;
-}
-
-function nowSeconds(){
-  if (!running) return accSeconds;
-  const elapsed = (performance.now() - baseStartMs) / 1000;
-  return accSeconds + elapsed;
-}
-
-function updateClock(){
-  clockEl.textContent = formatTimeMMSS(nowSeconds());
-}
-
-// ====== Cronômetro ======
-function startOrPause(){
-  if (!running){
-    // Iniciar/Retomar
-    running = true;
-    baseStartMs = performance.now();
-    btnToggle.textContent = 'Pausar';
-    tickInterval = setInterval(updateClock, 100);
-  } else {
-    // Pausar
-    running = false;
-    accSeconds = nowSeconds(); // congela no momento atual
-    btnToggle.textContent = 'Retomar';
-    if (tickInterval) { clearInterval(tickInterval); tickInterval = null; }
-    updateClock();
-  }
-}
-
-function resetTimer(){
-  running = false;
-  accSeconds = 0;
-  if (tickInterval) { clearInterval(tickInterval); tickInterval = null; }
-  btnToggle.textContent = 'Iniciar';
-  updateClock();
-}
-
-// ====== Interações ======
-btnToggle.addEventListener('click', startOrPause);
-btnReset.addEventListener('click', resetTimer);
-
-// Clique nos botões de eventos
-document.addEventListener('click', (e) => {
-  const btn = e.target.closest('button[data-code]');
-  if (!btn) return;
-
-  if (!running){
-    alert('Inicie o cronômetro para registrar eventos.');
-    return;
-  }
-
-  const code = btn.getAttribute('data-code');
-  tagEvent(code);
+// Inicializar contadores na interface
+CODES.forEach(code => {
+  counts[code] = 0;
+  const badge = document.getElementById(`count-${code}`);
+  if (badge) badge.textContent = '0';
 });
 
-// Lógica principal do tagueamento
-function tagEvent(code){
-  const t = nowSeconds();
-  const start = Math.max(0, t - 25);
-  const end   = t + 10;
+// Handler genérico
+function onEventClick(code){
+  // Atualiza contador
+  counts[code] = (counts[code] || 0) + 1;
+  const badge = document.getElementById(`count-${code}`);
+  if (badge) badge.textContent = String(counts[code]);
+
+  // Marca tempo atual e janela [-25, +10]
+  const t = currentSeconds();
+  const t1 = Math.max(0, round2(t - 25));
+  const t2 = round2(t + 10);
 
   events.push({
-    id: nextId++,
     code,
-    start,
-    end,
-    labels: [{ group: 'Event', text: code }]
+    tClick: round2(t),
+    t1,
+    t2
   });
 
-  // Atualiza contador visual
-  counts[code] = (counts[code] || 0) + 1;
-  const badge = document.getElementById(`count_${code}`);
-  if (badge) badge.textContent = counts[code];
+  // Feedback tátil (se suportado)
+  try { window.navigator.vibrate && window.navigator.vibrate(10); } catch(e){}
 }
+function round2(x){ return Math.round(x * 100) / 100; }
 
-// ====== Exportações ======
-document.getElementById('btnExportCSV').addEventListener('click', exportCSV);
-document.getElementById('btnExportXML').addEventListener('click', exportXML);
+// Conectar todos os botões .btn.event
+document.querySelectorAll('.btn.event').forEach(btn => {
+  const code = btn.getAttribute('data-code');
+  btn.addEventListener('click', () => onEventClick(code));
+});
 
-function exportCSV(){
-  // Apenas contadores
-  let csv = 'Code,Count\n';
-  EVENT_CODES.forEach(code => {
-    csv += `${code},${counts[code] || 0}\n`;
+// ======= Exportações =======
+
+// CSV: uma linha por código com o total
+document.getElementById('btnExportCSV').addEventListener('click', () => {
+  const header = ['code','count'];
+  const lines = [header.join(',')];
+  CODES.forEach(code => {
+    lines.push(`${escapeCsv(code)},${counts[code] || 0}`);
   });
+  const blob = new Blob([lines.join('\n')], {type:'text/csv;charset=utf-8;'});
+  downloadBlob(blob, `tags_${dateStamp()}_counts.csv`);
+});
 
-  downloadFile(csv, `contadores_${todayISO()}.csv`, 'text/csv;charset=utf-8;');
+function escapeCsv(s){
+  if (s.includes(',') || s.includes('"') || s.includes('\n')){
+    return `"${s.replace(/"/g, '""')}"`;
+  }
+  return s;
 }
 
-function exportXML(){
-  // Gera instâncias + ROWS
-  const xml = buildXML();
-  downloadFile(xml, `eventos_${todayISO()}.xml`, 'text/xml;charset=utf-8;');
-}
+// XML: eventos com t1 = t-25, t2 = t+10 e tabela ROWS (sort_order + cores)
+document.getElementById('btnExportXML').addEventListener('click', () => {
+  const xmlString = buildXML(events);
+  const blob = new Blob([xmlString], {type:'application/xml;charset=utf-8;'});
+  downloadBlob(blob, `tags_${dateStamp()}.xml`);
+});
 
-function buildXML(){
-  const rows = getRowDefinitions();
+// Ajuste aqui os códigos e cores para <ROWS>.
+// As cores são em 0..65535 (conversão feita a partir de hex 0..255)
+const ROW_DEFS = [
+  // sort_order, code, hex color
+  [1, 'FIN LEC',  '#0d6efd'],
+  [2, 'ESC OF',   '#6c757d'],
+  [3, 'FALTA OF', '#ef4444'],
+  [4, 'ENT LEC ESQ', '#22c55e'],
+  [5, 'ENT LEC CEN', '#a855f7'],
+  [6, 'ENT LEC DIR', '#f59e0b'],
 
-  let xml = '';
-  xml += `<?xml version="1.0" encoding="UTF-8"?>\n`;
-  xml += `<file>\n`;
-  xml += `    <!--Generated by LiveTagPRO-->\n`;
-  xml += `    <SORT_INFO>\n`;
-  xml += `        <sort_type>sort order</sort_type>\n`;
-  xml += `    </SORT_INFO>\n`;
-  xml += `    <ALL_INSTANCES>\n`;
+  [7,  'FIN ADV',  '#0d6efd'],
+  [8,  'ESC DEF',  '#6c757d'],
+  [9,  'FALTA DEF','#ef4444'],
+  [10, 'ENT ADV ESQ', '#22c55e'],
+  [11, 'ENT ADV CEN', '#a855f7'],
+  [12, 'ENT ADV DIR', '#f59e0b'],
+];
 
-  events.forEach(ev => {
-    xml += `        <instance>\n`;
-    xml += `            <ID>${ev.id}</ID>\n`;
-    xml += `            <code>${ev.code}</code>\n`;
-    xml += `            <start>${ev.start.toFixed(6)}</start>\n`;
-    xml += `            <end>${ev.end.toFixed(6)}</end>\n`;
-    ev.labels.forEach(l => {
-      xml += `            <label>\n`;
-      xml += `                <group>${l.group}</group>\n`;
-      xml += `                <text>${l.text}</text>\n`;
-      xml += `            </label>\n`;
-    });
-    xml += `        </instance>\n`;
-  });
+// Constrói XML no formato compatível (ajustável se precisar de campos extras)
+function buildXML(evts){
+  const rowsXml = ROW_DEFS.map(([order, code, hex]) => {
+    const {R,G,B} = hexTo65535(hex);
+    return [
+      '    <row>',
+      `      <sort_order>${order}</sort_order>`,
+      `      <code>${escapeXml(code)}</code>`,
+      `      <R>${R}</R>`,
+      `      <G>${G}</G>`,
+      `      <B>${B}</B>`,
+      '    </row>'
+    ].join('\n');
+  }).join('\n');
 
-  xml += `    </ALL_INSTANCES>\n`;
-  xml += `    <ROWS>\n`;
+  const eventsXml = evts.map(e => {
+    return [
+      '    <event>',
+      `      <code>${escapeXml(e.code)}</code>`,
+      `      <t1>${e.t1.toFixed(2)}</t1>`,
+      `      <t2>${e.t2.toFixed(2)}</t2>`,
+      '    </event>'
+    ].join('\n');
+  }).join('\n');
 
-  rows.forEach((row) => {
-    xml += `        <row>\n`;
-    xml += `            <sort_order>${row.sort_order}</sort_order>\n`;
-    xml += `            <code>${row.code}</code>\n`;
-    xml += `            <R>${row.R}</R>\n`;
-    xml += `            <G>${row.G}</G>\n`;
-    xml += `            <B>${row.B}</B>\n`;
-    xml += `        </row>\n`;
-  });
-
-  xml += `    </ROWS>\n`;
-  xml += `</file>\n`;
-
-  return xml;
-}
-
-// Definição de cores (0-65535) e sort_order únicos
-function getRowDefinitions(){
+  // Se o seu software exigir <SORT_INFO> com outros campos, me envie o XML completo.
   return [
-    { code: 'FIN_LEC',       sort_order: 1,  R: 65535, G: 12000, B: 8000 }, // laranja forte
-    { code: 'FIN_ADV',       sort_order: 2,  R: 12000, G: 20000, B: 65535 }, // roxo/azulado
-    { code: 'ENT_LAT_LEC',   sort_order: 3,  R: 0,     G: 50000, B: 60000 }, // ciano
-    { code: 'ENT_CEN_LEC',   sort_order: 4,  R: 25000, G: 0,     B: 65535 }, // violeta
-    { code: 'ENT_PROF_LEC',  sort_order: 5,  R: 0,     G: 48000, B: 0     }, // verde
-    { code: 'ENT_LAT_ADV',   sort_order: 6,  R: 65535, G: 38000, B: 18000 }, // âmbar
-    { code: 'ENT_CEN_ADV',   sort_order: 7,  R: 35000, G: 35000, B: 35000 }, // cinza
-    { code: 'ENT_PROF_ADV',  sort_order: 8,  R: 20000, G: 5000,  B: 5000  }  // bordo
-  ];
+    '<file>',
+    '  <!--Generated by Juega10 Tagger-->',
+    '  <SORT_INFO>',
+    '    <note>Custom layout Bonin</note>',
+    '  </SORT_INFO>',
+    '  <EVENTS>',
+         eventsXml || '    <!-- no events -->',
+    '  </EVENTS>',
+    '  <ROWS>',
+         rowsXml,
+    '  </ROWS>',
+    '</file>'
+  ].join('\n');
 }
 
-function todayISO(){
-  return new Date().toISOString().split('T')[0];
+function hexTo65535(hex){
+  const c = hex.replace('#','');
+  const r = parseInt(c.slice(0,2),16);
+  const g = parseInt(c.slice(2,4),16);
+  const b = parseInt(c.slice(4,6),16);
+  const R = Math.round(r / 255 * 65535);
+  const G = Math.round(g / 255 * 65535);
+  const B = Math.round(b / 255 * 65535);
+  return {R,G,B};
 }
 
-function downloadFile(content, filename, mime){
-  const blob = new Blob([content], { type: mime });
+function dateStamp(){
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth()+1).padStart(2,'0');
+  const dd = String(d.getDate()).padStart(2,'0');
+  const hh = String(d.getHours()).padStart(2,'0');
+  const mi = String(d.getMinutes()).padStart(2,'0');
+  const ss = String(d.getSeconds()).padStart(2,'0');
+  return `${yyyy}${mm}${dd}_${hh}${mi}${ss}`;
+}
+
+function downloadBlob(blob, filename){
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = filename; a.click();
-  URL.revokeObjectURL(url);
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  a.remove(); URL.revokeObjectURL(url);
 }
-
-// ====== PWA: registra Service Worker ======
-if ('serviceWorker' in navigator){
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./service-worker.js').catch(console.error);
-  });
-}
-
-// Inicializa relógio na UI
-updateClock();
