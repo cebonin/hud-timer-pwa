@@ -1,4 +1,6 @@
-const CACHE_VERSION = 11; // <--- MUDAR ESTE NÚMERO AO ATUALIZAR ARQUIVOS PARA FORÇAR CACHE
+// ***** MUDE ESTE NÚMERO PARA UM VALOR MAIOR A CADA NOVA PUBLICAÇÃO! *****
+const CACHE_VERSION = 12; // << AGORA É 10! DA PRÓXIMA VEZ, MUDARIA PARA 11.
+// **********************************************************************
 const CACHE_NAME = `juega10-tagger-cache-v${CACHE_VERSION}`;
 
 const URLS_TO_CACHE = [
@@ -15,6 +17,7 @@ const URLS_TO_CACHE = [
 
 // Instalação: pré-cacheia os recursos
 self.addEventListener('install', (event) => {
+  console.log(`[SW] Installing Service Worker v${CACHE_VERSION}...`);
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
@@ -28,6 +31,7 @@ self.addEventListener('install', (event) => {
 
 // Ativação: limpa caches antigos
 self.addEventListener('activate', (event) => {
+  console.log(`[SW] Activating Service Worker v${CACHE_VERSION}...`);
   event.waitUntil(
     caches.keys().then(cacheNames => {
       return Promise.all(
@@ -55,6 +59,7 @@ self.addEventListener('fetch', (event) => {
     caches.match(request).then(cachedResponse => {
       // Se encontrou no cache, retorna
       if (cachedResponse) {
+        //console.log(`[SW] Serving from cache: ${request.url}`);
         return cachedResponse;
       }
       // Senão, tenta buscar da rede
@@ -62,12 +67,14 @@ self.addEventListener('fetch', (event) => {
         // Clona a resposta para poder armazenar no cache e retornar ao cliente
         const responseToCache = networkResponse.clone();
         caches.open(CACHE_NAME).then(cache => {
+          //console.log(`[SW] Caching new resource: ${request.url}`);
           cache.put(request, responseToCache);
         });
         return networkResponse;
       }).catch(() => {
         // Fallback offline (se a requisição falhar e não estiver no cache, retorna a página principal)
-        return caches.match('./');
+        //console.log(`[SW] Fetch failed for ${request.url}, serving offline fallback.`);
+        return caches.match('./'); // Garante que a página principal esteja sempre disponível offline
       });
     })
   );
