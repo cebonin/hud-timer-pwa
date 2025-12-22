@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Juega10 Tagger Pro</title>
+
+  <!-- PWA Metadata -->
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#1a1a2e">
+  <link rel="apple-touch-icon" href="./icons/icon-180.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="app-container">
+    <main class="main-layout">
+      <!-- Coluna LEC -->
+      <section class="team-column lec">
+        <h2 class="team-name">LEC</h2>
+
+        <!-- Finalização + Esc/Falta OF -->
+        <div class="action-group">
+          <div class="final-row">
+            <button class="btn event-btn final-btn" data-code="FIN_LEC">
+              Finalização
+              <span class="count-badge" data-counter="FIN_LEC">0</span>
+            </button>
+            <div class="side-action-col">
+              <button class="btn event-btn side-btn esc-of" data-code="ESC_OF_LEC">
+                ESC OF
+                <span class="count-badge" data-counter="ESC_OF_LEC">0</span>
+              </button>
+              <button class="btn event-btn side-btn falta-of" data-code="FALTA_OF_LEC">
+                FALTA OF
+                <span class="count-badge" data-counter="FALTA_OF_LEC">0</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Entradas no Último Terço LEC -->
+        <div class="action-group">
+          <h3 class="group-title">Entradas no Último Terço</h3>
+          <div class="entries-grid">
+            <button class="btn event-btn entry-btn entry-esq" data-code="ENT_LEC_ESQ">
+              Esquerda
+              <span class="count-badge" data-counter="ENT_LEC_ESQ">0</span>
+            </button>
+            <button class="btn event-btn entry-btn entry-ctr" data-code="ENT_LEC_CTR">
+              Centro
+              <span class="count-badge" data-counter="ENT_LEC_CTR">0</span>
+            </button>
+            <button class="btn event-btn entry-btn entry-dir" data-code="ENT_LEC_DIR">
+              Direita
+              <span class="count-badge" data-counter="ENT_LEC_DIR">0</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Coluna ADV -->
+      <section class="team-column adv">
+        <h2 class="team-name">ADV</h2>
+
+        <!-- Finalização + Esc/Falta DEF -->
+        <div class="action-group">
+          <div class="final-row">
+            <button class="btn event-btn final-btn" data-code="FIN_ADV">
+              Finalização
+              <span class="count-badge" data-counter="FIN_ADV">0</span>
+            </button>
+            <div class="side-action-col">
+              <button class="btn event-btn side-btn esc-def" data-code="ESC_DEF_ADV">
+                ESC DEF
+                <span class="count-badge" data-counter="ESC_DEF_ADV">0</span>
+              </button>
+              <button class="btn event-btn side-btn falta-def" data-code="FALTA_DEF_ADV">
+                FALTA DEF
+                <span class="count-badge" data-counter="FALTA_DEF_ADV">0</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Entradas no Último Terço ADV -->
+        <div class="action-group">
+          <h3 class="group-title">Entradas no Último Terço</h3>
+          <div class="entries-grid">
+            <button class="btn event-btn entry-btn entry-esq" data-code="ENT_ADV_ESQ">
+              Esquerda
+              <span class="count-badge" data-counter="ENT_ADV_ESQ">0</span>
+            </button>
+            <button class="btn event-btn entry-btn entry-ctr" data-code="ENT_ADV_CTR">
+              Centro
+              <span class="count-badge" data-counter="ENT_ADV_CTR">0</span>
+            </button>
+            <button class="btn event-btn entry-btn entry-dir" data-code="ENT_ADV_DIR">
+              Direita
+              <span class="count-badge" data-counter="ENT_ADV_DIR">0</span>
+            </button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Barra inferior: Cronômetro e Controles -->
+    <footer class="bottom-bar">
+      <div class="timer-display" id="timerDisplay">00:00</div>
+      <div class="bottom-buttons">
+        <button id="btnToggleTimer" class="btn action-btn primary">Iniciar</button>
+        <button id="btnResetTimer" class="btn action-btn reset">Zerar</button>
+        <button id="btnExportXML" class="btn action-btn export">Exportar XML</button>
+      </div>
+    </footer>
+  </div>
+
+  <script src="./app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js').catch(console.error);
+      });
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,232 @@
+:root{
+  --bg: #1a1a2e;
+  --panel-bg: #21213b;
+  --text-color: #e0e0f0;
+  --muted-text: #a0a0c0;
+
+  --lec-color: #00bcd4; /* Ciano para LEC */
+  --adv-color: #ff9800; /* Laranja para ADV */
+
+  --btn-final-bg: #4caf50; /* Verde intenso */
+  --btn-esc-bg: #2196f3; /* Azul */
+  --btn-falta-bg: #f44336; /* Vermelho */
+
+  --btn-entry-esq-bg: #9c27b0; /* Roxo */
+  --btn-entry-ctr-bg: #ffeb3b; /* Amarelo */
+  --btn-entry-dir-bg: #795548; /* Marrom */
+
+  --primary-action-bg: #00e676; /* Verde neon */
+  --reset-action-bg: #607d8b; /* Cinza azulado */
+  --export-action-bg: #673ab7; /* Roxo escuro */
+
+  --gap: 12px;
+  --radius: 12px;
+  --shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+/* Base Reset & Globals */
+*{ box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html,body{ margin:0; padding:0; height:100%; }
+body{
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, sans-serif;
+  color: var(--text-color);
+  background-color: var(--bg);
+}
+
+.app-container{
+  min-height: 100dvh; /* Usa a altura dinâmica da viewport */
+  display: flex;
+  flex-direction: column;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+/* Main Layout (Two Columns) */
+.main-layout{
+  flex-grow: 1; /* Ocupa todo o espaço vertical disponível */
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--gap);
+  padding: var(--gap);
+  overflow-y: auto; /* Permite rolagem se o conteúdo exceder a altura */
+}
+
+/* Team Column */
+.team-column{
+  background-color: var(--panel-bg);
+  border-radius: var(--radius);
+  padding: var(--gap);
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+
+.team-name{
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0 0 var(--gap) 0;
+  padding-bottom: var(--gap);
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+.team-column.lec .team-name{ color: var(--lec-color); }
+.team-column.adv .team-name{ color: var(--adv-color); }
+
+/* Action Group (Finalization, Entries, etc.) */
+.action-group{
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  flex-grow: 1; /* Faz os grupos expandirem */
+}
+.group-title{
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--muted-text);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Buttons Base Style */
+.btn{
+  border: none;
+  border-radius: var(--radius);
+  color: var(--text-color);
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.1s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: var(--shadow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  position: relative; /* For badge positioning */
+  padding: var(--gap);
+}
+.btn:active{ transform: scale(0.98); box-shadow: inset 0 2px 4px rgba(0,0,0,0.2); }
+
+/* Event Buttons (Finalization, ESC/FALTA, Entries) */
+.event-btn{
+  font-size: 1.1rem;
+}
+
+/* Finalization Row Layout */
+.final-row{
+  display: grid;
+  grid-template-columns: 3fr 1fr; /* Finalization takes more space */
+  gap: var(--gap);
+  flex-grow: 1; /* Makes finalization row fill space */
+}
+.final-btn{
+  background-color: var(--btn-final-bg);
+  min-height: 150px; /* Muito Grande */
+  font-size: 1.3rem;
+  grid-column: 1;
+}
+
+.side-action-col{
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  grid-column: 2;
+}
+.side-btn{
+  min-height: 70px; /* Metade do final-btn */
+  font-size: 1rem;
+}
+.esc-of, .esc-def{ background-color: var(--btn-esc-bg); }
+.falta-of, .falta-def{ background-color: var(--btn-falta-bg); }
+
+
+/* Entries Grid Layout (3 buttons in one row) */
+.entries-grid{
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--gap);
+  flex-grow: 1; /* Makes entries fill space */
+}
+.entry-btn{
+  min-height: 100px; /* Grande */
+  font-size: 1rem;
+}
+.entry-esq{ background-color: var(--btn-entry-esq-bg); }
+.entry-ctr{ background-color: var(--btn-entry-ctr-bg); }
+.entry-dir{ background-color: var(--btn-entry-dir-bg); }
+
+
+/* Count Badges */
+.count-badge{
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background-color: rgba(0,0,0,0.3);
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  min-width: 30px; /* Garante que o badge não encolha demais */
+  text-align: center;
+}
+
+/* Bottom Bar (Timer & Controls) */
+.bottom-bar{
+  background-color: var(--panel-bg);
+  padding: var(--gap) calc(env(safe-area-inset-right) + var(--gap)) calc(env(safe-area-inset-bottom) + var(--gap)) calc(env(safe-area-inset-left) + var(--gap));
+  display: flex;
+  flex-wrap: wrap; /* Permite quebrar linha em telas pequenas */
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--gap);
+  border-top: 1px solid rgba(255,255,255,0.1);
+  box-shadow: 0 -4px 8px rgba(0,0,0,0.2);
+  position: sticky; /* Sticky footer */
+  bottom: 0;
+  z-index: 10;
+}
+
+.timer-display{
+  font-size: 1.8rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  font-variant-numeric: tabular-nums; /* Alinha dígitos */
+  flex-shrink: 0; /* Não deixa o timer encolher */
+}
+
+.bottom-buttons{
+  display: flex;
+  flex-grow: 1; /* Botões ocupam o espaço restante */
+  gap: var(--gap);
+  justify-content: flex-end;
+  flex-wrap: wrap; /* Quebra linha se muitos botões */
+}
+.action-btn{
+  min-width: 100px; /* Largura mínima para botões de ação */
+  min-height: 50px; /* Altura mínima para fácil toque */
+  font-size: 1rem;
+  flex-grow: 1; /* Faz os botões expandirem */
+}
+.action-btn.primary{ background-color: var(--primary-action-bg); color: #1a1a2e; }
+.action-btn.reset{ background-color: var(--reset-action-bg); }
+.action-btn.export{ background-color: var(--export-action-bg); }
+
+/* Responsividade */
+@media (max-width: 768px) {
+  .main-layout {
+    grid-template-columns: 1fr; /* Pilha as colunas em telas menores */
+  }
+}
+@media (max-width: 480px) {
+  .bottom-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .timer-display {
+    text-align: center;
+    width: 100%;
+  }
+  .bottom-buttons {
+    justify-content: center;
+  }
+  .action-btn {
+    min-width: 120px; /* Aumenta um pouco em telas muito pequenas */
+  }
+}
