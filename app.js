@@ -1,5 +1,5 @@
 // ======================================================
-// FutTag Pro - app.js v2.0
+// FutTag Pro - app.js v2.1
 // Developed by Carlos Bonin
 // ======================================================
 
@@ -329,49 +329,70 @@ function createChartForPDF(canvasId, title, data, chartType = 'bar') {
     data: data,
     options: {
       responsive: false,
-      maintainAspectRatio: true,
+      maintainAspectRatio: false,
       plugins: {
         title: {
-          display: true,
-          text: title,
-          font: { size: 16, weight: 'bold' },
-          color: '#e0e0f0'
+          display: false // Remove título do plugin para evitar duplicação
         },
         legend: {
-          labels: { color: '#e0e0f0' }
-        },
-        datalabels: {
           display: true,
-          color: '#fff',
-          font: { weight: 'bold', size: 12 },
-          formatter: (value) => value > 0 ? value : ''
+          position: 'top',
+          labels: { 
+            color: '#e0e0f0',
+            font: { size: 14, weight: 'bold' },
+            padding: 20
+          }
         }
       },
       scales: chartType === 'bar' ? {
         y: {
           beginAtZero: true,
-          ticks: { color: '#e0e0f0', stepSize: 1 },
+          stacked: chartType === 'bar' && data.datasets.length > 1,
+          ticks: { 
+            color: '#e0e0f0', 
+            stepSize: 1,
+            font: { size: 12, weight: 'bold' }
+          },
           grid: { color: 'rgba(224, 224, 240, 0.1)' }
         },
         x: {
-          ticks: { color: '#e0e0f0' },
+          stacked: chartType === 'bar' && data.datasets.length > 1,
+          ticks: { 
+            color: '#e0e0f0',
+            font: { size: 12, weight: 'bold' }
+          },
           grid: { color: 'rgba(224, 224, 240, 0.1)' }
         }
-      } : {}
+      } : {},
+      elements: {
+        bar: {
+          borderWidth: 2
+        }
+      }
     },
     plugins: [{
-      id: 'datalabels',
+      id: 'customDataLabels',
       afterDatasetsDraw: function(chart) {
         const ctx = chart.ctx;
+        ctx.fillStyle = '#000000'; // Cor preta
+        ctx.font = 'bold 14px Arial'; // Negrito e tamanho maior
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
         chart.data.datasets.forEach((dataset, i) => {
           const meta = chart.getDatasetMeta(i);
-          meta.data.forEach((bar, index) => {
+          if (meta.hidden) return;
+          
+          meta.data.forEach((element, index) => {
             const data = dataset.data[index];
             if (data > 0) {
-              ctx.fillStyle = '#fff';
-              ctx.font = 'bold 12px Arial';
-              ctx.textAlign = 'center';
-              ctx.fillText(data, bar.x, bar.y - 5);
+              // Para gráficos empilhados, ajusta a posição vertical
+              let yPos = element.y;
+              if (chart.options.scales.y.stacked && i > 0) {
+                // Se é uma barra empilhada e não é o primeiro dataset
+                yPos = element.y - (element.height / 2);
+              }
+              ctx.fillText(data, element.x, yPos);
             }
           });
         });
@@ -393,143 +414,96 @@ function generateAllCharts() {
     return codes.map(code => counts[code] || 0);
   }
 
-  // 1. Finalizações
+  // 1. FINALIZAÇÕES (3 gráficos)
   const finCodes = ['FIN_LEC_ESQ', 'FIN_LEC_CTR', 'FIN_LEC_DIR', 'FIN_ADV_ESQ', 'FIN_ADV_CTR', 'FIN_ADV_DIR'];
   const finLabels = ['LEC E', 'LEC C', 'LEC D', 'ADV E', 'ADV C', 'ADV D'];
   const finColors = [lecColor, lecColor, lecColor, advColor, advColor, advColor];
 
-  createChartForPDF('fin1TChart', 'Finalizações - 1° Tempo', {
+  const finalizacoesData = {
     labels: finLabels,
     datasets: [{
       label: 'Finalizações',
-      data: getDataByPeriod(finCodes, 'half1'),
+      data: [],
       backgroundColor: finColors,
-      borderWidth: 1
+      borderColor: finColors,
+      borderWidth: 2
     }]
-  });
+  };
 
-  createChartForPDF('fin2TChart', 'Finalizações - 2° Tempo', {
-    labels: finLabels,
-    datasets: [{
-      label: 'Finalizações',
-      data: getDataByPeriod(finCodes, 'half2'),
-      backgroundColor: finColors,
-      borderWidth: 1
-    }]
-  });
+  // Finalizações 1° Tempo
+  finalizacoesData.datasets[0].data = getDataByPeriod(finCodes, 'half1');
+  createChartForPDF('fin1TChart', 'Finalizações - 1° Tempo', JSON.parse(JSON.stringify(finalizacoesData)));
 
-  createChartForPDF('finTotalChart', 'Finalizações - Total da Partida', {
-    labels: finLabels,
-    datasets: [{
-      label: 'Finalizações',
-      data: getDataByPeriod(finCodes, 'total'),
-      backgroundColor: finColors,
-      borderWidth: 1
-    }]
-  });
+  // Finalizações 2° Tempo
+  finalizacoesData.datasets[0].data = getDataByPeriod(finCodes, 'half2');
+  createChartForPDF('fin2TChart', 'Finalizações - 2° Tempo', JSON.parse(JSON.stringify(finalizacoesData)));
 
-  // 2. Entradas no Último Terço
+  // Finalizações Total
+  finalizacoesData.datasets[0].data = getDataByPeriod(finCodes, 'total');
+  createChartForPDF('finTotalChart', 'Finalizações - Total da Partida', JSON.parse(JSON.stringify(finalizacoesData)));
+
+  // 2. ENTRADAS NO ÚLTIMO TERÇO (3 gráficos)
   const entCodes = ['ENT_LEC_ESQ', 'ENT_LEC_CTR', 'ENT_LEC_DIR', 'ENT_ADV_ESQ', 'ENT_ADV_CTR', 'ENT_ADV_DIR'];
   const entLabels = ['LEC E', 'LEC C', 'LEC D', 'ADV E', 'ADV C', 'ADV D'];
 
-  createChartForPDF('ent1TChart', 'Entradas no Último Terço - 1° Tempo', {
+  const entradasData = {
     labels: entLabels,
     datasets: [{
-      label: 'Entradas',
-      data: getDataByPeriod(entCodes, 'half1'),
+      label: 'Entradas no Último Terço',
+      data: [],
       backgroundColor: finColors,
-      borderWidth: 1
+      borderColor: finColors,
+      borderWidth: 2
     }]
-  });
+  };
 
-  createChartForPDF('ent2TChart', 'Entradas no Último Terço - 2° Tempo', {
-    labels: entLabels,
-    datasets: [{
-      label: 'Entradas',
-      data: getDataByPeriod(entCodes, 'half2'),
-      backgroundColor: finColors,
-      borderWidth: 1
-    }]
-  });
+  // Entradas 1° Tempo
+  entradasData.datasets[0].data = getDataByPeriod(entCodes, 'half1');
+  createChartForPDF('ent1TChart', 'Entradas no Último Terço - 1° Tempo', JSON.parse(JSON.stringify(entradasData)));
 
-  createChartForPDF('entTotalChart', 'Entradas no Último Terço - Total da Partida', {
-    labels: entLabels,
-    datasets: [{
-      label: 'Entradas',
-      data: getDataByPeriod(entCodes, 'total'),
-      backgroundColor: finColors,
-      borderWidth: 1
-    }]
-  });
+  // Entradas 2° Tempo
+  entradasData.datasets[0].data = getDataByPeriod(entCodes, 'half2');
+  createChartForPDF('ent2TChart', 'Entradas no Último Terço - 2° Tempo', JSON.parse(JSON.stringify(entradasData)));
 
-  // 3. Escanteios
+  // Entradas Total
+  entradasData.datasets[0].data = getDataByPeriod(entCodes, 'total');
+  createChartForPDF('entTotalChart', 'Entradas no Último Terço - Total da Partida', JSON.parse(JSON.stringify(entradasData)));
+
+  // 3. ESCANTEIOS E FALTAS LATERAIS (3 gráficos empilhados)
+  const escFaltaLabels = ['LEC', 'ADV'];
   const escCodes = ['ESC_OF_LEC', 'ESC_DEF_ADV'];
-  const escLabels = ['LEC', 'ADV'];
-  const escColors = [lecColor, advColor];
-
-  createChartForPDF('esc1TChart', 'Escanteios - 1° Tempo', {
-    labels: escLabels,
-    datasets: [{
-      label: 'Escanteios',
-      data: getDataByPeriod(escCodes, 'half1'),
-      backgroundColor: escColors,
-      borderWidth: 1
-    }]
-  });
-
-  createChartForPDF('esc2TChart', 'Escanteios - 2° Tempo', {
-    labels: escLabels,
-    datasets: [{
-      label: 'Escanteios',
-      data: getDataByPeriod(escCodes, 'half2'),
-      backgroundColor: escColors,
-      borderWidth: 1
-    }]
-  });
-
-  createChartForPDF('escTotalChart', 'Escanteios - Total da Partida', {
-    labels: escLabels,
-    datasets: [{
-      label: 'Escanteios',
-      data: getDataByPeriod(escCodes, 'total'),
-      backgroundColor: escColors,
-      borderWidth: 1
-    }]
-  });
-
-  // 4. Faltas Laterais
   const faltaCodes = ['FALTA_OF_LEC', 'FALTA_DEF_ADV'];
-  const faltaLabels = ['LEC', 'ADV'];
 
-  createChartForPDF('falta1TChart', 'Faltas Laterais - 1° Tempo', {
-    labels: faltaLabels,
-    datasets: [{
-      label: 'Faltas',
-      data: getDataByPeriod(faltaCodes, 'half1'),
-      backgroundColor: escColors,
-      borderWidth: 1
-    }]
-  });
+  function createEscFaltaData(period) {
+    return {
+      labels: escFaltaLabels,
+      datasets: [
+        {
+          label: 'Escanteios',
+          data: getDataByPeriod(escCodes, period),
+          backgroundColor: '#2196f3',
+          borderColor: '#1976d2',
+          borderWidth: 2
+        },
+        {
+          label: 'Faltas Laterais',
+          data: getDataByPeriod(faltaCodes, period),
+          backgroundColor: '#f44336',
+          borderColor: '#d32f2f',
+          borderWidth: 2
+        }
+      ]
+    };
+  }
 
-  createChartForPDF('falta2TChart', 'Faltas Laterais - 2° Tempo', {
-    labels: faltaLabels,
-    datasets: [{
-      label: 'Faltas',
-      data: getDataByPeriod(faltaCodes, 'half2'),
-      backgroundColor: escColors,
-      borderWidth: 1
-    }]
-  });
+  // Escanteios e Faltas 1° Tempo
+  createChartForPDF('escFalta1TChart', 'Escanteios e Faltas Laterais - 1° Tempo', createEscFaltaData('half1'));
 
-  createChartForPDF('faltaTotalChart', 'Faltas Laterais - Total da Partida', {
-    labels: faltaLabels,
-    datasets: [{
-      label: 'Faltas',
-      data: getDataByPeriod(faltaCodes, 'total'),
-      backgroundColor: escColors,
-      borderWidth: 1
-    }]
-  });
+  // Escanteios e Faltas 2° Tempo
+  createChartForPDF('escFalta2TChart', 'Escanteios e Faltas Laterais - 2° Tempo', createEscFaltaData('half2'));
+
+  // Escanteios e Faltas Total
+  createChartForPDF('escFaltaTotalChart', 'Escanteios e Faltas Laterais - Total da Partida', createEscFaltaData('total'));
 }
 
 // ==================== GERAÇÃO DE PDF ====================
@@ -541,70 +515,104 @@ async function generatePDFReport() {
     generateAllCharts();
     
     // Aguarda um pouco para os gráficos renderizarem
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise(resolve => setTimeout(resolve, 1500));
     
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF('p', 'mm', 'a4'); // Portrait, milimetros, A4
     
-    // Título principal
-    pdf.setFontSize(20);
-    pdf.setTextColor(0, 188, 212); // Cor do LEC
-    pdf.text('ESTATÍSTICAS DO JOGO', 105, 20, { align: 'center' });
+    const chartWidth = 180;
+    const chartHeight = 120;
+    const pageWidth = 210;
+    const pageHeight = 297;
+    const margin = 15;
     
-    // Informações do jogo
+    // PÁGINA 1: FINALIZAÇÕES
+    pdf.setFontSize(20);
+    pdf.setTextColor(0, 188, 212);
+    pdf.text('ESTATÍSTICAS DO JOGO', pageWidth/2, 25, { align: 'center' });
+    
     pdf.setFontSize(12);
     pdf.setTextColor(0, 0, 0);
-    pdf.text(`Placar: LEC ${appState.score.lec} x ${appState.score.adv} ADV`, 105, 30, { align: 'center' });
-    pdf.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 105, 37, { align: 'center' });
+    pdf.text(`Placar: LEC ${appState.score.lec} x ${appState.score.adv} ADV`, pageWidth/2, 35, { align: 'center' });
+    pdf.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, pageWidth/2, 42, { align: 'center' });
     
-    let yPosition = 50;
-    const chartWidth = 80;
-    const chartHeight = 60;
-    const margin = 10;
+    // Título da seção
+    pdf.setFontSize(16);
+    pdf.setTextColor(76, 175, 80);
+    pdf.text('FINALIZAÇÕES', pageWidth/2, 55, { align: 'center' });
     
-    // Lista de gráficos para incluir no PDF
-    const charts = [
-      { id: 'fin1TChart', title: 'Finalizações - 1° Tempo' },
-      { id: 'fin2TChart', title: 'Finalizações - 2° Tempo' },
-      { id: 'finTotalChart', title: 'Finalizações - Total' },
-      { id: 'ent1TChart', title: 'Entradas no Último Terço - 1° Tempo' },
-      { id: 'ent2TChart', title: 'Entradas no Último Terço - 2° Tempo' },
-      { id: 'entTotalChart', title: 'Entradas no Último Terço - Total' },
-      { id: 'esc1TChart', title: 'Escanteios - 1° Tempo' },
-      { id: 'esc2TChart', title: 'Escanteios - 2° Tempo' },
-      { id: 'escTotalChart', title: 'Escanteios - Total' },
-      { id: 'falta1TChart', title: 'Faltas Laterais - 1° Tempo' },
-      { id: 'falta2TChart', title: 'Faltas Laterais - 2° Tempo' },
-      { id: 'faltaTotalChart', title: 'Faltas Laterais - Total' }
-    ];
+    // Gráficos de Finalizações
+    const finCharts = ['fin1TChart', 'fin2TChart', 'finTotalChart'];
+    const finTitles = ['1° Tempo', '2° Tempo', 'Total da Partida'];
     
-    for (let i = 0; i < charts.length; i++) {
-      const chart = charts[i];
-      const canvas = document.getElementById(chart.id);
-      
+    for (let i = 0; i < finCharts.length; i++) {
+      const canvas = document.getElementById(finCharts[i]);
       if (canvas) {
-        // Converte o canvas para imagem
         const canvasImg = canvas.toDataURL('image/png', 1.0);
         
-        // Calcula posição
-        const isLeftColumn = i % 2 === 0;
-        const xPosition = isLeftColumn ? margin : margin + chartWidth + margin;
+        let yPos = 70 + (i * 75); // Espaçamento vertical
         
-        // Nova página a cada 6 gráficos (3 linhas de 2 gráficos)
-        if (i > 0 && i % 6 === 0) {
-          pdf.addPage();
-          yPosition = 20;
-        } else if (i > 0 && i % 2 === 0) {
-          yPosition += chartHeight + 15; // Espaço entre linhas
-        }
-        
-                // Adiciona título do gráfico
-        pdf.setFontSize(10);
+        // Título do gráfico
+        pdf.setFontSize(12);
         pdf.setTextColor(0, 0, 0);
-        pdf.text(chart.title, xPosition + chartWidth/2, yPosition - 3, { align: 'center' });
+        pdf.text(finTitles[i], pageWidth/2, yPos - 5, { align: 'center' });
         
-        // Adiciona a imagem do gráfico
-        pdf.addImage(canvasImg, 'PNG', xPosition, yPosition, chartWidth, chartHeight);
+        // Imagem do gráfico
+        pdf.addImage(canvasImg, 'PNG', margin, yPos, chartWidth, 60);
+      }
+    }
+    
+    // PÁGINA 2: ENTRADAS NO ÚLTIMO TERÇO
+    pdf.addPage();
+    
+    pdf.setFontSize(16);
+    pdf.setTextColor(156, 39, 176);
+    pdf.text('ENTRADAS NO ÚLTIMO TERÇO', pageWidth/2, 25, { align: 'center' });
+    
+    const entCharts = ['ent1TChart', 'ent2TChart', 'entTotalChart'];
+    const entTitles = ['1° Tempo', '2° Tempo', 'Total da Partida'];
+    
+    for (let i = 0; i < entCharts.length; i++) {
+      const canvas = document.getElementById(entCharts[i]);
+      if (canvas) {
+        const canvasImg = canvas.toDataURL('image/png', 1.0);
+        
+        let yPos = 40 + (i * 75);
+        
+        // Título do gráfico
+        pdf.setFontSize(12);
+        pdf.setTextColor(0, 0, 0);
+        pdf.text(entTitles[i], pageWidth/2, yPos - 5, { align: 'center' });
+        
+        // Imagem do gráfico
+        pdf.addImage(canvasImg, 'PNG', margin, yPos, chartWidth, 60);
+      }
+    }
+    
+        // PÁGINA 3: ESCANTEIOS E FALTAS LATERAIS
+    pdf.addPage();
+    
+    pdf.setFontSize(16);
+    pdf.setTextColor(33, 150, 243);
+    pdf.text('ESCANTEIOS E FALTAS LATERAIS', pageWidth/2, 25, { align: 'center' });
+    
+    const escFaltaCharts = ['escFalta1TChart', 'escFalta2TChart', 'escFaltaTotalChart'];
+    const escFaltaTitles = ['1° Tempo', '2° Tempo', 'Total da Partida'];
+    
+    for (let i = 0; i < escFaltaCharts.length; i++) {
+      const canvas = document.getElementById(escFaltaCharts[i]);
+      if (canvas) {
+        const canvasImg = canvas.toDataURL('image/png', 1.0);
+        
+        let yPos = 40 + (i * 75);
+        
+        // Título do gráfico
+        pdf.setFontSize(12);
+        pdf.setTextColor(0, 0, 0);
+        pdf.text(escFaltaTitles[i], pageWidth/2, yPos - 5, { align: 'center' });
+        
+        // Imagem do gráfico
+        pdf.addImage(canvasImg, 'PNG', margin, yPos, chartWidth, 60);
       }
     }
     
@@ -618,7 +626,7 @@ async function generatePDFReport() {
     });
     chartsInstances = {};
     
-    alert('📄 Relatório PDF gerado com sucesso!');
+    alert('📄 Relatório PDF gerado com sucesso! 3 páginas organizadas por categoria.');
     
   } catch (error) {
     console.error('Erro ao gerar PDF:', error);
@@ -809,7 +817,10 @@ function initializeApp() {
   updateUI();
   updateTimerDisplay();
 
-  console.log('🚀 FutTag Pro v2.0 inicializado com sucesso!');
+  console.log('🚀 FutTag Pro v2.1 inicializado com sucesso!');
+  console.log('📊 Relatório PDF: 3 páginas organizadas por categoria');
+  console.log('📱 Layout otimizado para mobile');
+  console.log('🎯 Gráficos com legendas corrigidas e rótulos em preto');
 }
 
 // Inicializa quando a página carrega

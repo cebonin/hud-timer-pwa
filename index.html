@@ -9,6 +9,9 @@
   <link rel="manifest" href="./manifest.json">
   <meta name="theme-color" content="#1a1a2e">
   <link rel="apple-touch-icon" href="./icons/icon-180.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="./icons/icon-180.png">
+  <link rel="apple-touch-icon" sizes="192x192" href="./icons/icon-192.png">
+  <link rel="apple-touch-icon" sizes="512x512" href="./icons/icon-512.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="FutTag">
@@ -221,64 +224,23 @@
       <!-- Container para gráficos temporários (não visíveis) -->
       <div id="chartsContainer" style="display: none;">
         <!-- Finalizações -->
-        <div class="hidden-chart-group">
-          <h3>Finalizações - 1° Tempo</h3>
-          <canvas id="fin1TChart" width="400" height="300"></canvas>
-        </div>
-        <div class="hidden-chart-group">
-          <h3>Finalizações - 2° Tempo</h3>
-          <canvas id="fin2TChart" width="400" height="300"></canvas>
-        </div>
-        <div class="hidden-chart-group">
-          <h3>Finalizações - Total</h3>
-          <canvas id="finTotalChart" width="400" height="300"></canvas>
-        </div>
+        <canvas id="fin1TChart" width="600" height="400"></canvas>
+        <canvas id="fin2TChart" width="600" height="400"></canvas>
+        <canvas id="finTotalChart" width="600" height="400"></canvas>
         
         <!-- Entradas -->
-        <div class="hidden-chart-group">
-          <h3>Entradas no Último Terço - 1° Tempo</h3>
-          <canvas id="ent1TChart" width="400" height="300"></canvas>
-        </div>
-        <div class="hidden-chart-group">
-          <h3>Entradas no Último Terço - 2° Tempo</h3>
-          <canvas id="ent2TChart" width="400" height="300"></canvas>
-        </div>
-        <div class="hidden-chart-group">
-          <h3>Entradas no Último Terço - Total</h3>
-          <canvas id="entTotalChart" width="400" height="300"></canvas>
-        </div>
+        <canvas id="ent1TChart" width="600" height="400"></canvas>
+        <canvas id="ent2TChart" width="600" height="400"></canvas>
+        <canvas id="entTotalChart" width="600" height="400"></canvas>
         
-        <!-- Escanteios -->
-        <div class="hidden-chart-group">
-          <h3>Escanteios - 1° Tempo</h3>
-          <canvas id="esc1TChart" width="400" height="300"></canvas>
-        </div>
-        <div class="hidden-chart-group">
-          <h3>Escanteios - 2° Tempo</h3>
-          <canvas id="esc2TChart" width="400" height="300"></canvas>
-        </div>
-        <div class="hidden-chart-group">
-          <h3>Escanteios - Total</h3>
-          <canvas id="escTotalChart" width="400" height="300"></canvas>
-        </div>
-        
-        <!-- Faltas -->
-        <div class="hidden-chart-group">
-          <h3>Faltas Laterais - 1° Tempo</h3>
-          <canvas id="falta1TChart" width="400" height="300"></canvas>
-        </div>
-        <div class="hidden-chart-group">
-          <h3>Faltas Laterais - 2° Tempo</h3>
-          <canvas id="falta2TChart" width="400" height="300"></canvas>
-        </div>
-        <div class="hidden-chart-group">
-          <h3>Faltas Laterais - Total</h3>
-          <canvas id="faltaTotalChart" width="400" height="300"></canvas>
-        </div>
+        <!-- Escanteios e Faltas -->
+        <canvas id="escFalta1TChart" width="600" height="400"></canvas>
+        <canvas id="escFalta2TChart" width="600" height="400"></canvas>
+        <canvas id="escFaltaTotalChart" width="600" height="400"></canvas>
       </div>
 
       <div class="stats-preview">
-        <p>📊 O relatório será gerado com <strong>12 gráficos</strong> organizados por tempo.</p>
+        <p>📊 O relatório será gerado com <strong>9 gráficos</strong> organizados em <strong>3 páginas</strong>.</p>
         <ul class="stats-summary">
           <li><strong>Finalizações:</strong> <span id="finSummary">-</span></li>
           <li><strong>Entradas no Último Terço:</strong> <span id="entSummary">-</span></li>
