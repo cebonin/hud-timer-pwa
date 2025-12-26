@@ -1,13 +1,13 @@
-// ======================================================
-// FutTag Pro - app.js v2.4 - Rótulos DENTRO das barras
+\// ======================================================
+// FutTag Pro - app.js v3.0 - Nomes Customizáveis
 // Developed by Carlos Bonin
 // ======================================================
 
 // ==================== APLICATIVO DE ESTADO ====================
 const appState = {
   score: {
-    lec: 0,
-    adv: 0
+    home: 0,
+    away: 0
   },
   currentHalf: 1, // 1 ou 2
   timer: {
@@ -22,22 +22,41 @@ const appState = {
     half1: {},     // Contadores do 1° tempo
     half2: {}      // Contadores do 2° tempo
   },
-  lastAction: null
+  lastAction: null,
+  // Novos campos para nomes das equipes
+  teamNames: {
+    home: 'CASA',
+    away: 'VISITANTE'
+  }
 };
 
 // ==================== SELETORES DE DOM ====================
 const timerDisplay = document.getElementById('timerDisplay');
-const scoreLecDisplay = document.getElementById('scoreLec');
-const scoreAdvDisplay = document.getElementById('scoreAdv');
+const scoreHomeDisplay = document.getElementById('scoreLec'); // Mantendo ID antigo por compatibilidade
+const scoreAwayDisplay = document.getElementById('scoreAdv');
 const currentHalfDisplay = document.getElementById('currentHalfDisplay');
 
 const btnToggleTimer = document.getElementById('btnToggleTimer');
 const btnResetAll = document.getElementById('btnResetAll');
 const btnUndo = document.getElementById('btnUndo');
 const btnShowStats = document.getElementById('btnShowStats');
+const btnTeamConfig = document.getElementById('btnTeamConfig');
 
+// Modal de configuração das equipes
+const teamConfigModal = document.getElementById('teamConfigModal');
+const teamConfigClose = document.getElementById('teamConfigClose');
+const homeTeamInput = document.getElementById('homeTeamInput');
+const awayTeamInput = document.getElementById('awayTeamInput');
+const btnSaveTeamConfig = document.getElementById('btnSaveTeamConfig');
+const btnResetTeamConfig = document.getElementById('btnResetTeamConfig');
+
+// Nomes das equipes na interface
+const homeTeamName = document.getElementById('homeTeamName');
+const awayTeamName = document.getElementById('awayTeamName');
+
+// Modal de estatísticas
 const statsModal = document.getElementById('statsModal');
-const closeButton = document.querySelector('.modal .close-button');
+const closeButton = document.querySelector('#statsModal .close-button');
 const btnGeneratePDF = document.getElementById('btnGeneratePDF');
 const btnExportXML = document.getElementById('btnExportXML');
 
@@ -49,14 +68,102 @@ const faltaSummary = document.getElementById('faltaSummary');
 
 // ==================== DEFINIÇÕES DE EVENTOS ====================
 const ALL_EVENT_CODES = [
-  'FIN_LEC_ESQ', 'FIN_LEC_CTR', 'FIN_LEC_DIR',
-  'ENT_LEC_ESQ', 'ENT_LEC_CTR', 'ENT_LEC_DIR',
-  'GOL_LEC', 'ESC_OF_LEC', 'FALTA_OF_LEC',
+  'FIN_HOME_ESQ', 'FIN_HOME_CTR', 'FIN_HOME_DIR',
+  'ENT_HOME_ESQ', 'ENT_HOME_CTR', 'ENT_HOME_DIR',
+  'GOL_HOME', 'ESC_OF_HOME', 'FALTA_OF_HOME',
 
-  'FIN_ADV_ESQ', 'FIN_ADV_CTR', 'FIN_ADV_DIR',
-  'ENT_ADV_ESQ', 'ENT_ADV_CTR', 'ENT_ADV_DIR',
-  'GOL_ADV', 'ESC_DEF_ADV', 'FALTA_DEF_ADV'
+  'FIN_AWAY_ESQ', 'FIN_AWAY_CTR', 'FIN_AWAY_DIR',
+  'ENT_AWAY_ESQ', 'ENT_AWAY_CTR', 'ENT_AWAY_DIR',
+  'GOL_AWAY', 'ESC_DEF_AWAY', 'FALTA_DEF_AWAY'
 ];
+
+// ==================== GERENCIAMENTO DOS NOMES DAS EQUIPES ====================
+function loadTeamNames() {
+  try {
+    const savedNames = localStorage.getItem('futtag_team_names');
+    if (savedNames) {
+      const names = JSON.parse(savedNames);
+      appState.teamNames.home = names.home || 'CASA';
+      appState.teamNames.away = names.away || 'VISITANTE';
+    }
+  } catch (error) {
+    console.warn('Erro ao carregar nomes das equipes:', error);
+    appState.teamNames = { home: 'CASA', away: 'VISITANTE' };
+  }
+}
+
+function saveTeamNames() {
+  try {
+    localStorage.setItem('futtag_team_names', JSON.stringify(appState.teamNames));
+  } catch (error) {
+    console.warn('Erro ao salvar nomes das equipes:', error);
+  }
+}
+
+function updateTeamNamesUI() {
+  homeTeamName.textContent = appState.teamNames.home;
+  awayTeamName.textContent = appState.teamNames.away;
+  
+  // Atualiza também os inputs do modal
+  homeTeamInput.value = appState.teamNames.home;
+  awayTeamInput.value = appState.teamNames.away;
+}
+
+function showTeamConfigModal() {
+  triggerHapticFeedback();
+  updateTeamNamesUI();
+  teamConfigModal.style.display = 'block';
+  homeTeamInput.focus();
+}
+
+function hideTeamConfigModal() {
+  teamConfigModal.style.display = 'none';
+}
+
+function saveTeamConfiguration() {
+  const homeName = homeTeamInput.value.trim();
+  const awayName = awayTeamInput.value.trim();
+  
+  if (!homeName || !awayName) {
+    alert('⚠️ Por favor, preencha os nomes das duas equipes.');
+    return;
+  }
+  
+  if (homeName.length > 15 || awayName.length > 15) {
+    alert('⚠️ Os nomes devem ter no máximo 15 caracteres cada.');
+    return;
+  }
+  
+  appState.teamNames.home = homeName.toUpperCase();
+  appState.teamNames.away = awayName.toUpperCase();
+  
+  saveTeamNames();
+  updateTeamNamesUI();
+  hideTeamConfigModal();
+  
+  triggerHapticFeedback();
+  alert(`✅ Configuração salva!\n🏠 ${appState.teamNames.home} vs ${appState.teamNames.away} ✈️`);
+}
+
+function resetTeamConfiguration() {
+  if (confirm('🔄 Deseja restaurar os nomes padrão das equipes?')) {
+    appState.teamNames.home = 'CASA';
+    appState.teamNames.away = 'VISITANTE';
+    saveTeamNames();
+    updateTeamNamesUI();
+    triggerHapticFeedback();
+  }
+}
+
+function checkFirstRun() {
+  const hasConfigured = localStorage.getItem('futtag_team_names');
+  if (!hasConfigured) {
+    // Primeira execução - mostra modal automaticamente
+    setTimeout(() => {
+      showTeamConfigModal();
+    }, 500);
+  }
+}
 
 // ==================== FUNÇÕES UTILITÁRIAS ====================
 function formatTimeMMSS(ms) {
@@ -75,8 +182,8 @@ function getCurrentTimeSeconds() {
 
 function updateUI() {
   // Atualiza placar
-  scoreLecDisplay.textContent = appState.score.lec;
-  scoreAdvDisplay.textContent = appState.score.adv;
+  scoreHomeDisplay.textContent = appState.score.home;
+  scoreAwayDisplay.textContent = appState.score.away;
 
   // Atualiza contadores dos badges
   document.querySelectorAll('.count-badge').forEach(badge => {
@@ -114,26 +221,28 @@ function updateStatsSummary() {
   if (!finSummary) return;
   
   const counts = appState.eventCounts.total;
+  const homeTeamName = appState.teamNames.home;
+  const awayTeamName = appState.teamNames.away;
   
   // Finalizações
-  const lecFins = (counts['FIN_LEC_ESQ'] || 0) + (counts['FIN_LEC_CTR'] || 0) + (counts['FIN_LEC_DIR'] || 0);
-  const advFins = (counts['FIN_ADV_ESQ'] || 0) + (counts['FIN_ADV_CTR'] || 0) + (counts['FIN_ADV_DIR'] || 0);
-  finSummary.textContent = `LEC: ${lecFins} | ADV: ${advFins}`;
+  const homeFins = (counts['FIN_HOME_ESQ'] || 0) + (counts['FIN_HOME_CTR'] || 0) + (counts['FIN_HOME_DIR'] || 0);
+  const awayFins = (counts['FIN_AWAY_ESQ'] || 0) + (counts['FIN_AWAY_CTR'] || 0) + (counts['FIN_AWAY_DIR'] || 0);
+  finSummary.textContent = `${homeTeamName}: ${homeFins} | ${awayTeamName}: ${awayFins}`;
   
   // Entradas
-  const lecEnts = (counts['ENT_LEC_ESQ'] || 0) + (counts['ENT_LEC_CTR'] || 0) + (counts['ENT_LEC_DIR'] || 0);
-  const advEnts = (counts['ENT_ADV_ESQ'] || 0) + (counts['ENT_ADV_CTR'] || 0) + (counts['ENT_ADV_DIR'] || 0);
-  entSummary.textContent = `LEC: ${lecEnts} | ADV: ${advEnts}`;
+  const homeEnts = (counts['ENT_HOME_ESQ'] || 0) + (counts['ENT_HOME_CTR'] || 0) + (counts['ENT_HOME_DIR'] || 0);
+  const awayEnts = (counts['ENT_AWAY_ESQ'] || 0) + (counts['ENT_AWAY_CTR'] || 0) + (counts['ENT_AWAY_DIR'] || 0);
+  entSummary.textContent = `${homeTeamName}: ${homeEnts} | ${awayTeamName}: ${awayEnts}`;
   
   // Escanteios
-  const lecEscs = counts['ESC_OF_LEC'] || 0;
-  const advEscs = counts['ESC_DEF_ADV'] || 0;
-  escSummary.textContent = `LEC: ${lecEscs} | ADV: ${advEscs}`;
+  const homeEscs = counts['ESC_OF_HOME'] || 0;
+  const awayEscs = counts['ESC_DEF_AWAY'] || 0;
+  escSummary.textContent = `${homeTeamName}: ${homeEscs} | ${awayTeamName}: ${awayEscs}`;
   
   // Faltas
-  const lecFaltas = counts['FALTA_OF_LEC'] || 0;
-  const advFaltas = counts['FALTA_DEF_ADV'] || 0;
-  faltaSummary.textContent = `LEC: ${lecFaltas} | ADV: ${advFaltas}`;
+  const homeFaltas = counts['FALTA_OF_HOME'] || 0;
+  const awayFaltas = counts['FALTA_DEF_AWAY'] || 0;
+  faltaSummary.textContent = `${homeTeamName}: ${homeFaltas} | ${awayTeamName}: ${awayFaltas}`;
 }
 
 function triggerHapticFeedback() {
@@ -239,10 +348,10 @@ function recordEventClick(code) {
   appState.eventCounts[`half${currentHalf}`][code] = (appState.eventCounts[`half${currentHalf}`][code] || 0) + 1;
 
   // Lógica para gols
-  if (code === 'GOL_LEC') {
-    appState.score.lec++;
-  } else if (code === 'GOL_ADV') {
-    appState.score.adv++;
+  if (code === 'GOL_HOME') {
+    appState.score.home++;
+  } else if (code === 'GOL_AWAY') {
+    appState.score.away++;
   }
 
   // Registra o evento
@@ -298,7 +407,7 @@ function resetAll() {
   }
   triggerHapticFeedback();
 
-  appState.score = { lec: 0, adv: 0 };
+  appState.score = { home: 0, away: 0 };
   appState.currentHalf = 1;
   appState.timer = {
     isRunning: false,
@@ -373,27 +482,26 @@ function createChartForPDF(canvasId, title, data, chartType = 'bar', hideLegend 
             size: 14
           },
           formatter: (value) => value,
-          // 🎯 CORREÇÃO PRINCIPAL: Rótulos DENTRO das barras, na parte inferior
           align: function(context) {
             const meta = context.chart.getDatasetMeta(context.datasetIndex);
             if (meta.stack) {
-              return 'center'; // Para barras empilhadas, mantém no centro
+              return 'center';
             }
-            return 'start'; // Para barras normais, posiciona na base
+            return 'start';
           },
           anchor: function(context) {
             const meta = context.chart.getDatasetMeta(context.datasetIndex);
             if (meta.stack) {
-              return 'center'; // Para barras empilhadas, ancora no centro
+              return 'center';
             }
-            return 'end'; // Para barras normais, ancora no TOPO da barra
+            return 'end';
           },
           offset: function(context) {
             const meta = context.chart.getDatasetMeta(context.datasetIndex);
             if (meta.stack) {
-              return 0; // Para barras empilhadas, sem offset
+              return 0;
             }
-            return -15; // Para barras normais, empurra PARA DENTRO da barra
+            return -15;
           }
         }
       },
@@ -437,14 +545,14 @@ function getDataByPeriod(codes, period) {
 }
 
 function generateAllCharts() {
-  const lecColor = '#00bcd4';
-  const advColor = '#ff9800';
+  const homeColor = '#00bcd4';
+  const awayColor = '#ff9800';
 
   // 1. FINALIZAÇÕES (3 gráficos)
-  const finCodesLEC = ['FIN_LEC_ESQ', 'FIN_LEC_CTR', 'FIN_LEC_DIR'];
-  const finCodesADV = ['FIN_ADV_ESQ', 'FIN_ADV_CTR', 'FIN_ADV_DIR'];
-  const finLabels = ['LEC E', 'LEC C', 'LEC D', 'ADV E', 'ADV C', 'ADV D'];
-  const finChartColors = [lecColor, lecColor, lecColor, advColor, advColor, advColor];
+  const finCodesHome = ['FIN_HOME_ESQ', 'FIN_HOME_CTR', 'FIN_HOME_DIR'];
+  const finCodesAway = ['FIN_AWAY_ESQ', 'FIN_AWAY_CTR', 'FIN_AWAY_DIR'];
+  const finLabels = [`${appState.teamNames.home} E`, `${appState.teamNames.home} C`, `${appState.teamNames.home} D`, `${appState.teamNames.away} E`, `${appState.teamNames.away} C`, `${appState.teamNames.away} D`];
+  const finChartColors = [homeColor, homeColor, homeColor, awayColor, awayColor, awayColor];
 
   const finalizacoesDataTemplate = {
     labels: finLabels,
@@ -459,41 +567,41 @@ function generateAllCharts() {
 
   fin1TData = JSON.parse(JSON.stringify(finalizacoesDataTemplate));
   fin1TData.datasets[0].data = [
-    getDataByPeriod(['FIN_LEC_ESQ'], 'half1'),
-    getDataByPeriod(['FIN_LEC_CTR'], 'half1'),
-    getDataByPeriod(['FIN_LEC_DIR'], 'half1'),
-    getDataByPeriod(['FIN_ADV_ESQ'], 'half1'),
-    getDataByPeriod(['FIN_ADV_CTR'], 'half1'),
-    getDataByPeriod(['FIN_ADV_DIR'], 'half1')
+    getDataByPeriod(['FIN_HOME_ESQ'], 'half1'),
+    getDataByPeriod(['FIN_HOME_CTR'], 'half1'),
+    getDataByPeriod(['FIN_HOME_DIR'], 'half1'),
+    getDataByPeriod(['FIN_AWAY_ESQ'], 'half1'),
+    getDataByPeriod(['FIN_AWAY_CTR'], 'half1'),
+    getDataByPeriod(['FIN_AWAY_DIR'], 'half1')
   ];
   createChartForPDF('fin1TChart', 'Finalizações - 1° Tempo', fin1TData, 'bar', true);
 
-  fin2TData = JSON.parse(JSON.stringify(finalizacoesDataTemplate));
+    fin2TData = JSON.parse(JSON.stringify(finalizacoesDataTemplate));
   fin2TData.datasets[0].data = [
-    getDataByPeriod(['FIN_LEC_ESQ'], 'half2'),
-    getDataByPeriod(['FIN_LEC_CTR'], 'half2'),
-    getDataByPeriod(['FIN_LEC_DIR'], 'half2'),
-    getDataByPeriod(['FIN_ADV_ESQ'], 'half2'),
-    getDataByPeriod(['FIN_ADV_CTR'], 'half2'),
-    getDataByPeriod(['FIN_ADV_DIR'], 'half2')
+    getDataByPeriod(['FIN_HOME_ESQ'], 'half2'),
+    getDataByPeriod(['FIN_HOME_CTR'], 'half2'),
+    getDataByPeriod(['FIN_HOME_DIR'], 'half2'),
+    getDataByPeriod(['FIN_AWAY_ESQ'], 'half2'),
+    getDataByPeriod(['FIN_AWAY_CTR'], 'half2'),
+    getDataByPeriod(['FIN_AWAY_DIR'], 'half2')
   ];
   createChartForPDF('fin2TChart', 'Finalizações - 2° Tempo', fin2TData, 'bar', true);
 
   finTotalData = JSON.parse(JSON.stringify(finalizacoesDataTemplate));
   finTotalData.datasets[0].data = [
-    getDataByPeriod(['FIN_LEC_ESQ'], 'total'),
-    getDataByPeriod(['FIN_LEC_CTR'], 'total'),
-    getDataByPeriod(['FIN_LEC_DIR'], 'total'),
-    getDataByPeriod(['FIN_ADV_ESQ'], 'total'),
-    getDataByPeriod(['FIN_ADV_CTR'], 'total'),
-    getDataByPeriod(['FIN_ADV_DIR'], 'total')
+    getDataByPeriod(['FIN_HOME_ESQ'], 'total'),
+    getDataByPeriod(['FIN_HOME_CTR'], 'total'),
+    getDataByPeriod(['FIN_HOME_DIR'], 'total'),
+    getDataByPeriod(['FIN_AWAY_ESQ'], 'total'),
+    getDataByPeriod(['FIN_AWAY_CTR'], 'total'),
+    getDataByPeriod(['FIN_AWAY_DIR'], 'total')
   ];
   createChartForPDF('finTotalChart', 'Finalizações - Total da Partida', finTotalData, 'bar', true);
 
   // 2. ENTRADAS NO ÚLTIMO TERÇO (3 gráficos)
-  const entCodesLEC = ['ENT_LEC_ESQ', 'ENT_LEC_CTR', 'ENT_LEC_DIR'];
-  const entCodesADV = ['ENT_ADV_ESQ', 'ENT_ADV_CTR', 'ENT_ADV_DIR'];
-  const entLabels = ['LEC E', 'LEC C', 'LEC D', 'ADV E', 'ADV C', 'ADV D'];
+  const entCodesHome = ['ENT_HOME_ESQ', 'ENT_HOME_CTR', 'ENT_HOME_DIR'];
+  const entCodesAway = ['ENT_AWAY_ESQ', 'ENT_AWAY_CTR', 'ENT_AWAY_DIR'];
+  const entLabels = [`${appState.teamNames.home} E`, `${appState.teamNames.home} C`, `${appState.teamNames.home} D`, `${appState.teamNames.away} E`, `${appState.teamNames.away} C`, `${appState.teamNames.away} D`];
 
   const entradasDataTemplate = {
     labels: entLabels,
@@ -508,43 +616,43 @@ function generateAllCharts() {
 
   ent1TData = JSON.parse(JSON.stringify(entradasDataTemplate));
   ent1TData.datasets[0].data = [
-    getDataByPeriod(['ENT_LEC_ESQ'], 'half1'),
-    getDataByPeriod(['ENT_LEC_CTR'], 'half1'),
-    getDataByPeriod(['ENT_LEC_DIR'], 'half1'),
-    getDataByPeriod(['ENT_ADV_ESQ'], 'half1'),
-    getDataByPeriod(['ENT_ADV_CTR'], 'half1'),
-    getDataByPeriod(['ENT_ADV_DIR'], 'half1')
+    getDataByPeriod(['ENT_HOME_ESQ'], 'half1'),
+    getDataByPeriod(['ENT_HOME_CTR'], 'half1'),
+    getDataByPeriod(['ENT_HOME_DIR'], 'half1'),
+    getDataByPeriod(['ENT_AWAY_ESQ'], 'half1'),
+    getDataByPeriod(['ENT_AWAY_CTR'], 'half1'),
+    getDataByPeriod(['ENT_AWAY_DIR'], 'half1')
   ];
   createChartForPDF('ent1TChart', 'Entradas no Último Terço - 1° Tempo', ent1TData, 'bar', true);
 
   ent2TData = JSON.parse(JSON.stringify(entradasDataTemplate));
   ent2TData.datasets[0].data = [
-    getDataByPeriod(['ENT_LEC_ESQ'], 'half2'),
-    getDataByPeriod(['ENT_LEC_CTR'], 'half2'),
-    getDataByPeriod(['ENT_LEC_DIR'], 'half2'),
-    getDataByPeriod(['ENT_ADV_ESQ'], 'half2'),
-    getDataByPeriod(['ENT_ADV_CTR'], 'half2'),
-    getDataByPeriod(['ENT_ADV_DIR'], 'half2')
+    getDataByPeriod(['ENT_HOME_ESQ'], 'half2'),
+    getDataByPeriod(['ENT_HOME_CTR'], 'half2'),
+    getDataByPeriod(['ENT_HOME_DIR'], 'half2'),
+    getDataByPeriod(['ENT_AWAY_ESQ'], 'half2'),
+    getDataByPeriod(['ENT_AWAY_CTR'], 'half2'),
+    getDataByPeriod(['ENT_AWAY_DIR'], 'half2')
   ];
   createChartForPDF('ent2TChart', 'Entradas no Último Terço - 2° Tempo', ent2TData, 'bar', true);
 
   entTotalData = JSON.parse(JSON.stringify(entradasDataTemplate));
   entTotalData.datasets[0].data = [
-    getDataByPeriod(['ENT_LEC_ESQ'], 'total'),
-    getDataByPeriod(['ENT_LEC_CTR'], 'total'),
-    getDataByPeriod(['ENT_LEC_DIR'], 'total'),
-    getDataByPeriod(['ENT_ADV_ESQ'], 'total'),
-    getDataByPeriod(['ENT_ADV_CTR'], 'total'),
-    getDataByPeriod(['ENT_ADV_DIR'], 'total')
+    getDataByPeriod(['ENT_HOME_ESQ'], 'total'),
+    getDataByPeriod(['ENT_HOME_CTR'], 'total'),
+    getDataByPeriod(['ENT_HOME_DIR'], 'total'),
+    getDataByPeriod(['ENT_AWAY_ESQ'], 'total'),
+    getDataByPeriod(['ENT_AWAY_CTR'], 'total'),
+    getDataByPeriod(['ENT_AWAY_DIR'], 'total')
   ];
   createChartForPDF('entTotalChart', 'Entradas no Último Terço - Total da Partida', entTotalData, 'bar', true);
 
   // 3. ESCANTEIOS E FALTAS LATERAIS (3 gráficos empilhados)
-  const escFaltaLabels = ['LEC', 'ADV'];
-  const escCodes = ['ESC_OF_LEC'];
-  const faltaCodes = ['FALTA_OF_LEC'];
-  const advEscCodes = ['ESC_DEF_ADV'];
-  const advFaltaCodes = ['FALTA_DEF_ADV'];
+  const escFaltaLabels = [appState.teamNames.home, appState.teamNames.away];
+  const escCodes = ['ESC_OF_HOME'];
+  const faltaCodes = ['FALTA_OF_HOME'];
+  const awayEscCodes = ['ESC_DEF_AWAY'];
+  const awayFaltaCodes = ['FALTA_DEF_AWAY'];
 
   function createEscFaltaData(period) {
     return {
@@ -552,14 +660,14 @@ function generateAllCharts() {
       datasets: [
         {
           label: 'Escanteios',
-          data: [getDataByPeriod(escCodes, period), getDataByPeriod(advEscCodes, period)],
+          data: [getDataByPeriod(escCodes, period), getDataByPeriod(awayEscCodes, period)],
           backgroundColor: '#2196f3',
           borderColor: '#1976d2',
           borderWidth: 2
         },
         {
           label: 'Faltas Laterais',
-          data: [getDataByPeriod(faltaCodes, period), getDataByPeriod(advFaltaCodes, period)],
+          data: [getDataByPeriod(faltaCodes, period), getDataByPeriod(awayFaltaCodes, period)],
           backgroundColor: '#f44336',
           borderColor: '#d32f2f',
           borderWidth: 2
@@ -606,11 +714,11 @@ async function generatePDFReport() {
     }
     
     // Calcula totais para exibir no PDF
-    const getTotals = (codesLEC, codesADV, period) => {
+    const getTotals = (codesHome, codesAway, period) => {
       const counts = appState.eventCounts[period];
-      const totalLEC = codesLEC.reduce((acc, code) => acc + (counts[code] || 0), 0);
-      const totalADV = codesADV.reduce((acc, code) => acc + (counts[code] || 0), 0);
-      return `Total LEC: ${totalLEC} | Total ADV: ${totalADV}`;
+      const totalHome = codesHome.reduce((acc, code) => acc + (counts[code] || 0), 0);
+      const totalAway = codesAway.reduce((acc, code) => acc + (counts[code] || 0), 0);
+      return `Total ${appState.teamNames.home}: ${totalHome} | Total ${appState.teamNames.away}: ${totalAway}`;
     };
 
     // --- PAGE 1: FINALIZAÇÕES ---
@@ -623,7 +731,7 @@ async function generatePDFReport() {
     yCurrent += 10;
     
     pdf.setFontSize(12);
-    pdf.text(`LEC ${appState.score.lec} x ${appState.score.adv} ADV`, pageWidth/2, yCurrent, { align: 'center' });
+    pdf.text(`${appState.teamNames.home} ${appState.score.home} x ${appState.score.away} ${appState.teamNames.away}`, pageWidth/2, yCurrent, { align: 'center' });
     yCurrent += 7;
     pdf.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, pageWidth/2, yCurrent, { align: 'center' });
     yCurrent += 13;
@@ -634,9 +742,9 @@ async function generatePDFReport() {
     yCurrent += 10;
 
     const finCharts = [
-      { id: 'fin1TChart', title: '1° Tempo', codesLEC: ['FIN_LEC_ESQ', 'FIN_LEC_CTR', 'FIN_LEC_DIR'], codesADV: ['FIN_ADV_ESQ', 'FIN_ADV_CTR', 'FIN_ADV_DIR'], period: 'half1' },
-      { id: 'fin2TChart', title: '2° Tempo', codesLEC: ['FIN_LEC_ESQ', 'FIN_LEC_CTR', 'FIN_LEC_DIR'], codesADV: ['FIN_ADV_ESQ', 'FIN_ADV_CTR', 'FIN_ADV_DIR'], period: 'half2' },
-      { id: 'finTotalChart', title: 'Total da Partida', codesLEC: ['FIN_LEC_ESQ', 'FIN_LEC_CTR', 'FIN_LEC_DIR'], codesADV: ['FIN_ADV_ESQ', 'FIN_ADV_CTR', 'FIN_ADV_DIR'], period: 'total' }
+      { id: 'fin1TChart', title: '1° Tempo', codesHome: ['FIN_HOME_ESQ', 'FIN_HOME_CTR', 'FIN_HOME_DIR'], codesAway: ['FIN_AWAY_ESQ', 'FIN_AWAY_CTR', 'FIN_AWAY_DIR'], period: 'half1' },
+      { id: 'fin2TChart', title: '2° Tempo', codesHome: ['FIN_HOME_ESQ', 'FIN_HOME_CTR', 'FIN_HOME_DIR'], codesAway: ['FIN_AWAY_ESQ', 'FIN_AWAY_CTR', 'FIN_AWAY_DIR'], period: 'half2' },
+      { id: 'finTotalChart', title: 'Total da Partida', codesHome: ['FIN_HOME_ESQ', 'FIN_HOME_CTR', 'FIN_HOME_DIR'], codesAway: ['FIN_AWAY_ESQ', 'FIN_AWAY_CTR', 'FIN_AWAY_DIR'], period: 'total' }
     ];
     
     for (const chart of finCharts) {
@@ -652,7 +760,7 @@ async function generatePDFReport() {
         yCurrent += chartPdfHeight;
         
         pdf.setFontSize(10);
-        pdf.text(getTotals(chart.codesLEC, chart.codesADV, chart.period), pageWidth/2, yCurrent + 5, { align: 'center' });
+        pdf.text(getTotals(chart.codesHome, chart.codesAway, chart.period), pageWidth/2, yCurrent + 5, { align: 'center' });
         yCurrent += 15;
       } catch (error) {
         console.error(`Erro ao processar gráfico ${chart.id}:`, error);
@@ -675,9 +783,9 @@ async function generatePDFReport() {
     yCurrent += 10;
     
     const entCharts = [
-      { id: 'ent1TChart', title: '1° Tempo', codesLEC: ['ENT_LEC_ESQ', 'ENT_LEC_CTR', 'ENT_LEC_DIR'], codesADV: ['ENT_ADV_ESQ', 'ENT_ADV_CTR', 'ENT_ADV_DIR'], period: 'half1' },
-      { id: 'ent2TChart', title: '2° Tempo', codesLEC: ['ENT_LEC_ESQ', 'ENT_LEC_CTR', 'ENT_LEC_DIR'], codesADV: ['ENT_ADV_ESQ', 'ENT_ADV_CTR', 'ENT_ADV_DIR'], period: 'half2' },
-      { id: 'entTotalChart', title: 'Total da Partida', codesLEC: ['ENT_LEC_ESQ', 'ENT_LEC_CTR', 'ENT_LEC_DIR'], codesADV: ['ENT_ADV_ESQ', 'ENT_ADV_CTR', 'ENT_ADV_DIR'], period: 'total' }
+      { id: 'ent1TChart', title: '1° Tempo', codesHome: ['ENT_HOME_ESQ', 'ENT_HOME_CTR', 'ENT_HOME_DIR'], codesAway: ['ENT_AWAY_ESQ', 'ENT_AWAY_CTR', 'ENT_AWAY_DIR'], period: 'half1' },
+      { id: 'ent2TChart', title: '2° Tempo', codesHome: ['ENT_HOME_ESQ', 'ENT_HOME_CTR', 'ENT_HOME_DIR'], codesAway: ['ENT_AWAY_ESQ', 'ENT_AWAY_CTR', 'ENT_AWAY_DIR'], period: 'half2' },
+      { id: 'entTotalChart', title: 'Total da Partida', codesHome: ['ENT_HOME_ESQ', 'ENT_HOME_CTR', 'ENT_HOME_DIR'], codesAway: ['ENT_AWAY_ESQ', 'ENT_AWAY_CTR', 'ENT_AWAY_DIR'], period: 'total' }
     ];
     
     for (const chart of entCharts) {
@@ -693,7 +801,7 @@ async function generatePDFReport() {
         yCurrent += chartPdfHeight;
         
         pdf.setFontSize(10);
-        pdf.text(getTotals(chart.codesLEC, chart.codesADV, chart.period), pageWidth/2, yCurrent + 5, { align: 'center' });
+        pdf.text(getTotals(chart.codesHome, chart.codesAway, chart.period), pageWidth/2, yCurrent + 5, { align: 'center' });
         yCurrent += 15;
       } catch (error) {
         console.error(`Erro ao processar gráfico ${chart.id}:`, error);
@@ -716,9 +824,9 @@ async function generatePDFReport() {
     yCurrent += 10;
     
     const escFaltaCharts = [
-      { id: 'escFalta1TChart', title: '1° Tempo', codesLEC: ['ESC_OF_LEC'], codesADV: ['ESC_DEF_ADV'], codesLEC_FL: ['FALTA_OF_LEC'], codesADV_FL: ['FALTA_DEF_ADV'], period: 'half1' },
-      { id: 'escFalta2TChart', title: '2° Tempo', codesLEC: ['ESC_OF_LEC'], codesADV: ['ESC_DEF_ADV'], codesLEC_FL: ['FALTA_OF_LEC'], codesADV_FL: ['FALTA_DEF_ADV'], period: 'half2' },
-      { id: 'escFaltaTotalChart', title: 'Total da Partida', codesLEC: ['ESC_OF_LEC'], codesADV: ['ESC_DEF_ADV'], codesLEC_FL: ['FALTA_OF_LEC'], codesADV_FL: ['FALTA_DEF_ADV'], period: 'total' }
+      { id: 'escFalta1TChart', title: '1° Tempo', codesHome: ['ESC_OF_HOME'], codesAway: ['ESC_DEF_AWAY'], codesHome_FL: ['FALTA_OF_HOME'], codesAway_FL: ['FALTA_DEF_AWAY'], period: 'half1' },
+      { id: 'escFalta2TChart', title: '2° Tempo', codesHome: ['ESC_OF_HOME'], codesAway: ['ESC_DEF_AWAY'], codesHome_FL: ['FALTA_OF_HOME'], codesAway_FL: ['FALTA_DEF_AWAY'], period: 'half2' },
+      { id: 'escFaltaTotalChart', title: 'Total da Partida', codesHome: ['ESC_OF_HOME'], codesAway: ['ESC_DEF_AWAY'], codesHome_FL: ['FALTA_OF_HOME'], codesAway_FL: ['FALTA_DEF_AWAY'], period: 'total' }
     ];
     
     for (const chart of escFaltaCharts) {
@@ -734,8 +842,8 @@ async function generatePDFReport() {
         yCurrent += chartPdfHeight;
         
         // Exibe totais de escanteios e faltas separadamente
-        const totalEscanteios = getTotals(chart.codesLEC, chart.codesADV, chart.period);
-        const totalFaltas = getTotals(chart.codesLEC_FL, chart.codesADV_FL, chart.period);
+        const totalEscanteios = getTotals(chart.codesHome, chart.codesAway, chart.period);
+        const totalFaltas = getTotals(chart.codesHome_FL, chart.codesAway_FL, chart.period);
         pdf.setFontSize(10);
         pdf.text(`Escanteios - ${totalEscanteios}`, pageWidth/2, yCurrent + 2, { align: 'center' });
         pdf.text(`Faltas Laterais - ${totalFaltas}`, pageWidth/2, yCurrent + 8, { align: 'center' });
@@ -751,7 +859,7 @@ async function generatePDFReport() {
     pdf.text('FutTag Pro', pageWidth - margin, pageHeight - 10, { align: 'right' });
 
     // Salva o PDF
-    const filename = `futtag_estatisticas_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.pdf`;
+    const filename = `futtag_${appState.teamNames.home}_vs_${appState.teamNames.away}_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.pdf`;
     console.log('💾 Salvando PDF...');
     pdf.save(filename);
     
@@ -762,7 +870,7 @@ async function generatePDFReport() {
     chartsInstances = {};
     
     console.log('✅ PDF gerado com sucesso!');
-    alert('📄 Relatório PDF gerado com sucesso! Os rótulos agora estão dentro das barras.');
+    alert('📄 Relatório PDF gerado com sucesso!');
     
   } catch (error) {
     console.error('❌ Erro detalhado na geração do PDF:', error);
@@ -804,33 +912,33 @@ function rgbToLiveTagProColor(rgbVal) {
 }
 
 const rowDefinitions = [
-  // LEC
-  { code: 'FIN_LEC_ESQ', sort_order: 1, color: '#4caf50', label: 'FIN_LEC_ESQ' },
-  { code: 'FIN_LEC_CTR', sort_order: 2, color: '#66bb6a', label: 'FIN_LEC_CTR' },
-  { code: 'FIN_LEC_DIR', sort_order: 3, color: '#81c784', label: 'FIN_LEC_DIR' },
-  { code: 'ENT_LEC_ESQ', sort_order: 4, color: '#9c27b0', label: 'ENT_LEC_ESQ' },
-  { code: 'ENT_LEC_CTR', sort_order: 5, color: '#ab47bc', label: 'ENT_LEC_CTR' },
-  { code: 'ENT_LEC_DIR', sort_order: 6, color: '#ba68c8', label: 'ENT_LEC_DIR' },
-  { code: 'GOL_LEC', sort_order: 7, color: '#e91e63', label: 'GOL_LEC' },
-  { code: 'ESC_OF_LEC', sort_order: 8, color: '#2196f3', label: 'ESC_OF_LEC' },
-  { code: 'FALTA_OF_LEC', sort_order: 9, color: '#f44336', label: 'FALTA_OF_LEC' },
+  // HOME
+  { code: 'FIN_HOME_ESQ', sort_order: 1, color: '#4caf50', label: 'FIN_HOME_ESQ' },
+  { code: 'FIN_HOME_CTR', sort_order: 2, color: '#66bb6a', label: 'FIN_HOME_CTR' },
+  { code: 'FIN_HOME_DIR', sort_order: 3, color: '#81c784', label: 'FIN_HOME_DIR' },
+  { code: 'ENT_HOME_ESQ', sort_order: 4, color: '#9c27b0', label: 'ENT_HOME_ESQ' },
+  { code: 'ENT_HOME_CTR', sort_order: 5, color: '#ab47bc', label: 'ENT_HOME_CTR' },
+  { code: 'ENT_HOME_DIR', sort_order: 6, color: '#ba68c8', label: 'ENT_HOME_DIR' },
+  { code: 'GOL_HOME', sort_order: 7, color: '#e91e63', label: 'GOL_HOME' },
+  { code: 'ESC_OF_HOME', sort_order: 8, color: '#2196f3', label: 'ESC_OF_HOME' },
+  { code: 'FALTA_OF_HOME', sort_order: 9, color: '#f44336', label: 'FALTA_OF_HOME' },
 
-  // ADV
-  { code: 'FIN_ADV_ESQ', sort_order: 10, color: '#ff9800', label: 'FIN_ADV_ESQ' },
-  { code: 'FIN_ADV_CTR', sort_order: 11, color: '#ffa726', label: 'FIN_ADV_CTR' },
-  { code: 'FIN_ADV_DIR', sort_order: 12, color: '#ffb74d', label: 'FIN_ADV_DIR' },
-  { code: 'ENT_ADV_ESQ', sort_order: 13, color: '#795548', label: 'ENT_ADV_ESQ' },
-  { code: 'ENT_ADV_CTR', sort_order: 14, color: '#8d6e63', label: 'ENT_ADV_CTR' },
-  { code: 'ENT_ADV_DIR', sort_order: 15, color: '#a1887f', label: 'ENT_ADV_DIR' },
-  { code: 'GOL_ADV', sort_order: 16, color: '#e91e63', label: 'GOL_ADV' },
-  { code: 'ESC_DEF_ADV', sort_order: 17, color: '#2196f3', label: 'ESC_DEF_ADV' },
-  { code: 'FALTA_DEF_ADV', sort_order: 18, color: '#f44336', label: 'FALTA_DEF_ADV' },
+  // AWAY
+  { code: 'FIN_AWAY_ESQ', sort_order: 10, color: '#ff9800', label: 'FIN_AWAY_ESQ' },
+  { code: 'FIN_AWAY_CTR', sort_order: 11, color: '#ffa726', label: 'FIN_AWAY_CTR' },
+  { code: 'FIN_AWAY_DIR', sort_order: 12, color: '#ffb74d', label: 'FIN_AWAY_DIR' },
+  { code: 'ENT_AWAY_ESQ', sort_order: 13, color: '#795548', label: 'ENT_AWAY_ESQ' },
+  { code: 'ENT_AWAY_CTR', sort_order: 14, color: '#8d6e63', label: 'ENT_AWAY_CTR' },
+  { code: 'ENT_AWAY_DIR', sort_order: 15, color: '#a1887f', label: 'ENT_AWAY_DIR' },
+  { code: 'GOL_AWAY', sort_order: 16, color: '#e91e63', label: 'GOL_AWAY' },
+  { code: 'ESC_DEF_AWAY', sort_order: 17, color: '#2196f3', label: 'ESC_DEF_AWAY' },
+  { code: 'FALTA_DEF_AWAY', sort_order: 18, color: '#f44336', label: 'FALTA_DEF_AWAY' },
 ];
 
 function buildLiveTagProXml() {
   let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
   xml += `<file>\n`;
-  xml += `    <!--Generated by FutTag Pro-->\n`;
+  xml += `    <!--Generated by FutTag Pro - ${appState.teamNames.home} vs ${appState.teamNames.away}-->\n`;
   xml += `    <SORT_INFO>\n`;
   xml += `        <sort_type>sort order</sort_type>\n`;
   xml += `    </SORT_INFO>\n`;
@@ -879,7 +987,7 @@ function exportXML() {
   const blob = new Blob([xmlContent], { type: 'application/xml;charset=utf-8;' });
   const downloadLink = document.createElement('a');
   downloadLink.href = URL.createObjectURL(blob);
-  downloadLink.download = `futtag_events_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.xml`;
+  downloadLink.download = `futtag_${appState.teamNames.home}_vs_${appState.teamNames.away}_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.xml`;
   document.body.appendChild(downloadLink);
   downloadLink.click();
   document.body.removeChild(downloadLink);
@@ -920,6 +1028,7 @@ btnToggleTimer.addEventListener('click', () => {
 btnResetAll.addEventListener('click', resetAll);
 btnUndo.addEventListener('click', undoLastAction);
 btnShowStats.addEventListener('click', showStatsModal);
+btnTeamConfig.addEventListener('click', showTeamConfigModal);
 
 // Controles de metade
 document.querySelectorAll('.half-btn').forEach(btn => {
@@ -948,21 +1057,55 @@ window.addEventListener('click', (event) => {
   }
 });
 
+// Modal de configuração das equipes
+teamConfigClose.addEventListener('click', hideTeamConfigModal);
+btnSaveTeamConfig.addEventListener('click', saveTeamConfiguration);
+btnResetTeamConfig.addEventListener('click', resetTeamConfiguration);
+
+// Fecha modal de configuração ao clicar fora
+window.addEventListener('click', (event) => {
+  if (event.target === teamConfigModal) {
+    hideTeamConfigModal();
+  }
+});
+
+// Enter nos inputs para salvar
+homeTeamInput.addEventListener('keydown', (event) => {
+  if (event.key === 'Enter') {
+    awayTeamInput.focus();
+  }
+});
+
+awayTeamInput.addEventListener('keydown', (event) => {
+  if (event.key === 'Enter') {
+    saveTeamConfiguration();
+  }
+});
+
 // Exportações
 btnGeneratePDF.addEventListener('click', generatePDFReport);
 btnExportXML.addEventListener('click', exportXML);
 
 // ==================== INICIALIZAÇÃO ====================
 function initializeApp() {
+  // Carrega nomes das equipes salvos
+  loadTeamNames();
+  
   // Inicializa contadores
   initializeEventCounts();
 
   // Atualiza UI inicial
+  updateTeamNamesUI();
   updateUI();
   updateTimerDisplay();
 
-  console.log('🚀 FutTag Pro v2.4 inicializado com sucesso!');
-  console.log('🎯 Correção final: Rótulos posicionados DENTRO das barras, parte inferior.');
+  // Verifica se é a primeira execução
+  checkFirstRun();
+
+  console.log('🚀 FutTag Pro v3.0 inicializado com sucesso!');
+  console.log('⚽ Sistema de nomes customizáveis implementado');
+  console.log(`🏠 Time da casa: ${appState.teamNames.home}`);
+  console.log(`✈️ Time visitante: ${appState.teamNames.away}`);
 }
 
 // Inicializa quando a página carrega

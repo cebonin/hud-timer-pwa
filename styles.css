@@ -4,8 +4,8 @@
   --text-color: #e0e0f0;
   --muted-text: #a0a0c0;
 
-  --lec-color: #00bcd4; /* Ciano para LEC */
-  --adv-color: #ff9800; /* Laranja para ADV */
+  --home-color: #00bcd4; /* Ciano para time da casa */
+  --away-color: #ff9800; /* Laranja para time visitante */
 
   --btn-default-bg: #333;
 
@@ -23,6 +23,7 @@
   --undo-action-bg: #607d8b; /* Cinza azulado */
   --reset-action-bg: #f44336; /* Vermelho para reset */
   --stats-action-bg: #673ab7; /* Roxo escuro para stats */
+  --config-action-bg: #795548; /* Marrom para configuração */
   --export-action-bg: #009688; /* Verde água para exportar */
 
   --gap: 8px;
@@ -146,9 +147,11 @@ body {
   padding-bottom: var(--gap);
   border-bottom: 1px solid rgba(255,255,255,0.1);
   grid-row: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
-.team-column.lec .team-name { color: var(--lec-color); }
-.team-column.adv .team-name { color: var(--adv-color); }
+.team-column.home .team-name { color: var(--home-color); }
+.team-column.away .team-name { color: var(--away-color); }
 
 /* Action Group */
 .action-group {
@@ -289,6 +292,7 @@ body {
 .action-btn.undo { background-color: var(--undo-action-bg); }
 .action-btn.reset { background-color: var(--reset-action-bg); }
 .action-btn.stats { background-color: var(--stats-action-bg); }
+.action-btn.config { background-color: var(--config-action-bg); }
 .action-btn.export { background-color: var(--export-action-bg); }
 
 /* Modal Styles */
@@ -334,10 +338,93 @@ body {
 
 .modal-content h2 {
   text-align: center;
-  color: var(--lec-color);
+  color: var(--home-color);
   margin-top: 0;
   border-bottom: 1px solid rgba(255,255,255,0.1);
   padding-bottom: var(--gap);
+}
+
+/* Team Config Modal Styles */
+.team-config-modal {
+  max-width: 450px;
+  max-height: 70vh;
+}
+
+.team-config-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.team-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.team-input-group label {
+  font-weight: 600;
+  color: var(--text-color);
+  font-size: 1rem;
+}
+
+.team-input {
+  padding: 12px;
+  border: 2px solid var(--btn-default-bg);
+  border-radius: var(--radius);
+  background-color: var(--bg);
+  color: var(--text-color);
+  font-size: 1rem;
+  font-weight: 500;
+  transition: border-color 0.2s ease;
+}
+
+.team-input:focus {
+  outline: none;
+  border-color: var(--home-color);
+  background-color: rgba(0, 188, 212, 0.05);
+}
+
+.input-hint {
+  font-size: 0.8rem;
+  color: var(--muted-text);
+  font-style: italic;
+}
+
+.config-buttons {
+  display: flex;
+  gap: var(--gap);
+  margin-top: 10px;
+}
+
+.config-btn {
+  flex-grow: 1;
+  min-height: 45px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.config-btn.save { 
+  background-color: var(--primary-action-bg); 
+  color: #1a1a2e; 
+}
+
+.config-btn.reset { 
+  background-color: var(--reset-action-bg); 
+}
+
+.config-info {
+  background-color: var(--bg);
+  padding: 12px;
+  border-radius: var(--radius);
+  border-left: 4px solid var(--home-color);
+  margin-top: 10px;
+}
+
+.config-info p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--muted-text);
 }
 
 .stats-preview {
@@ -436,6 +523,16 @@ body {
   .group-title {
     font-size: 0.6rem;
   }
+
+  /* Team config modal mobile */
+  .team-config-modal {
+    width: 95%;
+    max-height: 85vh;
+  }
+
+  .config-buttons {
+    flex-direction: column;
+  }
 }
 
 @media (max-width: 480px) {
@@ -455,6 +552,11 @@ body {
   
   .stats-export-options {
     flex-direction: column;
+  }
+
+  .team-input {
+    padding: 10px;
+    font-size: 0.9rem;
   }
 }
 

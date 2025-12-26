@@ -1,5 +1,5 @@
 // ***** MUDE ESTE NÚMERO PARA UM VALOR MAIOR A CADA NOVA PUBLICAÇÃO! *****
-const CACHE_VERSION = 35; // << VERSÃO ATUALIZADA PARA FUTTAG PRO v2.2
+const CACHE_VERSION = 40; // << VERSÃO ATUALIZADA PARA FUTTAG PRO v3.0
 // **********************************************************************
 const CACHE_NAME = `futtag-pro-cache-v${CACHE_VERSION}`;
 
@@ -15,14 +15,14 @@ const URLS_TO_CACHE = [
   './icons/icon-512.png',
   // Bibliotecas externas para funcionar offline
   'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js',
-  'https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js', // NOVO PLUGIN
+  'https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'
 ];
 
 // Instalação: pré-cacheia os recursos
 self.addEventListener('install', (event) => {
-  console.log(`[SW] Installing FutTag Pro v2.2 Service Worker v${CACHE_VERSION}...`);
+  console.log(`[SW] Installing FutTag Pro v3.0 Service Worker v${CACHE_VERSION}...`);
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
@@ -43,7 +43,7 @@ self.addEventListener('install', (event) => {
 
 // Ativação: limpa caches antigos
 self.addEventListener('activate', (event) => {
-  console.log(`[SW] Activating FutTag Pro v2.2 Service Worker v${CACHE_VERSION}...`);
+  console.log(`[SW] Activating FutTag Pro v3.0 Service Worker v${CACHE_VERSION}...`);
   event.waitUntil(
     caches.keys().then(cacheNames => {
       return Promise.all(
