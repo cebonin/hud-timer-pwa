@@ -1,5 +1,5 @@
 // ***** MUDE ESTE NÚMERO PARA UM VALOR MAIOR A CADA NOVA PUBLICAÇÃO! *****
-const CACHE_VERSION = 40; // << VERSÃO ATUALIZADA PARA FUTTAG PRO v3.0
+const CACHE_VERSION = 41; // << VERSÃO ATUALIZADA PARA FUTTAG PRO v3.1
 // **********************************************************************
 const CACHE_NAME = `futtag-pro-cache-v${CACHE_VERSION}`;
 
@@ -22,7 +22,7 @@ const URLS_TO_CACHE = [
 
 // Instalação: pré-cacheia os recursos
 self.addEventListener('install', (event) => {
-  console.log(`[SW] Installing FutTag Pro v3.0 Service Worker v${CACHE_VERSION}...`);
+  console.log(`[SW] Installing FutTag Pro v3.1 Service Worker v${CACHE_VERSION}...`);
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
@@ -43,7 +43,7 @@ self.addEventListener('install', (event) => {
 
 // Ativação: limpa caches antigos
 self.addEventListener('activate', (event) => {
-  console.log(`[SW] Activating FutTag Pro v3.0 Service Worker v${CACHE_VERSION}...`);
+  console.log(`[SW] Activating FutTag Pro v3.1 Service Worker v${CACHE_VERSION}...`);
   event.waitUntil(
     caches.keys().then(cacheNames => {
       return Promise.all(

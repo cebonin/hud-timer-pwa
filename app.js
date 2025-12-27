@@ -1,5 +1,5 @@
-\// ======================================================
-// FutTag Pro - app.js v3.0 - Nomes Customizáveis
+// ======================================================
+// FutTag Pro - app.js v3.1 - Corrigido e Funcional
 // Developed by Carlos Bonin
 // ======================================================
 
@@ -32,8 +32,8 @@ const appState = {
 
 // ==================== SELETORES DE DOM ====================
 const timerDisplay = document.getElementById('timerDisplay');
-const scoreHomeDisplay = document.getElementById('scoreLec'); // Mantendo ID antigo por compatibilidade
-const scoreAwayDisplay = document.getElementById('scoreAdv');
+const scoreHomeDisplay = document.getElementById('homeScore');
+const scoreAwayDisplay = document.getElementById('awayScore');
 const currentHalfDisplay = document.getElementById('currentHalfDisplay');
 
 const btnToggleTimer = document.getElementById('btnToggleTimer');
@@ -101,28 +101,32 @@ function saveTeamNames() {
 }
 
 function updateTeamNamesUI() {
-  homeTeamName.textContent = appState.teamNames.home;
-  awayTeamName.textContent = appState.teamNames.away;
+  if (homeTeamName) homeTeamName.textContent = appState.teamNames.home;
+  if (awayTeamName) awayTeamName.textContent = appState.teamNames.away;
   
   // Atualiza também os inputs do modal
-  homeTeamInput.value = appState.teamNames.home;
-  awayTeamInput.value = appState.teamNames.away;
+  if (homeTeamInput) homeTeamInput.value = appState.teamNames.home;
+  if (awayTeamInput) awayTeamInput.value = appState.teamNames.away;
 }
 
 function showTeamConfigModal() {
   triggerHapticFeedback();
   updateTeamNamesUI();
-  teamConfigModal.style.display = 'block';
-  homeTeamInput.focus();
+  if (teamConfigModal) {
+    teamConfigModal.style.display = 'block';
+    if (homeTeamInput) homeTeamInput.focus();
+  }
 }
 
 function hideTeamConfigModal() {
-  teamConfigModal.style.display = 'none';
+  if (teamConfigModal) {
+    teamConfigModal.style.display = 'none';
+  }
 }
 
 function saveTeamConfiguration() {
-  const homeName = homeTeamInput.value.trim();
-  const awayName = awayTeamInput.value.trim();
+  const homeName = homeTeamInput ? homeTeamInput.value.trim() : '';
+  const awayName = awayTeamInput ? awayTeamInput.value.trim() : '';
   
   if (!homeName || !awayName) {
     alert('⚠️ Por favor, preencha os nomes das duas equipes.');
@@ -182,8 +186,8 @@ function getCurrentTimeSeconds() {
 
 function updateUI() {
   // Atualiza placar
-  scoreHomeDisplay.textContent = appState.score.home;
-  scoreAwayDisplay.textContent = appState.score.away;
+  if (scoreHomeDisplay) scoreHomeDisplay.textContent = appState.score.home;
+  if (scoreAwayDisplay) scoreAwayDisplay.textContent = appState.score.away;
 
   // Atualiza contadores dos badges
   document.querySelectorAll('.count-badge').forEach(badge => {
@@ -192,7 +196,7 @@ function updateUI() {
   });
 
   // Atualiza display de tempo de jogo
-  currentHalfDisplay.textContent = `${appState.currentHalf}°T`;
+  if (currentHalfDisplay) currentHalfDisplay.textContent = `${appState.currentHalf}°T`;
 
   // Atualiza botões de half
   document.querySelectorAll('.half-btn').forEach(btn => {
@@ -204,14 +208,18 @@ function updateUI() {
   });
 
   // Atualiza o texto do botão Iniciar/Pausar
-  if (appState.timer.isRunning) {
-    btnToggleTimer.textContent = 'Pausar';
-  } else {
-    btnToggleTimer.textContent = appState.timer.elapsedMs === 0 ? 'Iniciar' : 'Retomar';
+  if (btnToggleTimer) {
+    if (appState.timer.isRunning) {
+      btnToggleTimer.textContent = 'Pausar';
+    } else {
+      btnToggleTimer.textContent = appState.timer.elapsedMs === 0 ? 'Iniciar' : 'Retomar';
+    }
   }
 
   // Desabilita Undo se não há eventos
-  btnUndo.disabled = appState.events.length === 0;
+  if (btnUndo) {
+    btnUndo.disabled = appState.events.length === 0;
+  }
   
   // Atualiza summary no modal se estiver visível
   updateStatsSummary();
@@ -246,12 +254,20 @@ function updateStatsSummary() {
 }
 
 function triggerHapticFeedback() {
-  try { window.navigator.vibrate && window.navigator.vibrate(50); } catch (e) {}
+  try { 
+    if (window.navigator.vibrate) {
+      window.navigator.vibrate(50);
+    }
+  } catch (e) {
+    console.log('Vibração não disponível');
+  }
 }
 
 // ==================== FUNÇÕES DO CRONÔMETRO ====================
 function updateTimerDisplay() {
-  timerDisplay.textContent = formatTimeMMSS(appState.timer.elapsedMs + (appState.timer.isRunning ? (performance.now() - appState.timer.startEpoch) : 0));
+  if (timerDisplay) {
+    timerDisplay.textContent = formatTimeMMSS(appState.timer.elapsedMs + (appState.timer.isRunning ? (performance.now() - appState.timer.startEpoch) : 0));
+  }
 }
 
 function tick() {
@@ -425,13 +441,18 @@ function resetAll() {
 // ==================== GERAÇÃO DE GRÁFICOS PARA PDF ====================
 let chartsInstances = {};
 
-// Registra o plugin DataLabels globalmente
+// Registra o plugin DataLabels globalmente se disponível
 if (typeof ChartDataLabels !== 'undefined') {
   Chart.register(ChartDataLabels);
 }
 
 function createChartForPDF(canvasId, title, data, chartType = 'bar', hideLegend = false) {
   const canvas = document.getElementById(canvasId);
+  if (!canvas) {
+    console.error(`Canvas ${canvasId} não encontrado`);
+    return null;
+  }
+  
   const ctx = canvas.getContext('2d');
   
   // Define fundo branco para o canvas antes de criar o gráfico
@@ -534,8 +555,13 @@ function createChartForPDF(canvasId, title, data, chartType = 'bar', hideLegend 
     }
   };
 
-  chartsInstances[canvasId] = new Chart(ctx, config);
-  return chartsInstances[canvasId];
+  try {
+    chartsInstances[canvasId] = new Chart(ctx, config);
+    return chartsInstances[canvasId];
+  } catch (error) {
+    console.error(`Erro ao criar gráfico ${canvasId}:`, error);
+    return null;
+  }
 }
 
 // Função para obter dados por período
@@ -545,6 +571,7 @@ function getDataByPeriod(codes, period) {
 }
 
 function generateAllCharts() {
+  console.log('🔄 Gerando gráficos...');
   const homeColor = '#00bcd4';
   const awayColor = '#ff9800';
 
@@ -565,7 +592,8 @@ function generateAllCharts() {
     }]
   };
 
-  fin1TData = JSON.parse(JSON.stringify(finalizacoesDataTemplate));
+  // 1°T
+  const fin1TData = JSON.parse(JSON.stringify(finalizacoesDataTemplate));
   fin1TData.datasets[0].data = [
     getDataByPeriod(['FIN_HOME_ESQ'], 'half1'),
     getDataByPeriod(['FIN_HOME_CTR'], 'half1'),
@@ -576,7 +604,8 @@ function generateAllCharts() {
   ];
   createChartForPDF('fin1TChart', 'Finalizações - 1° Tempo', fin1TData, 'bar', true);
 
-    fin2TData = JSON.parse(JSON.stringify(finalizacoesDataTemplate));
+  // 2°T
+  const fin2TData = JSON.parse(JSON.stringify(finalizacoesDataTemplate));
   fin2TData.datasets[0].data = [
     getDataByPeriod(['FIN_HOME_ESQ'], 'half2'),
     getDataByPeriod(['FIN_HOME_CTR'], 'half2'),
@@ -587,7 +616,8 @@ function generateAllCharts() {
   ];
   createChartForPDF('fin2TChart', 'Finalizações - 2° Tempo', fin2TData, 'bar', true);
 
-  finTotalData = JSON.parse(JSON.stringify(finalizacoesDataTemplate));
+  // Total
+  const finTotalData = JSON.parse(JSON.stringify(finalizacoesDataTemplate));
   finTotalData.datasets[0].data = [
     getDataByPeriod(['FIN_HOME_ESQ'], 'total'),
     getDataByPeriod(['FIN_HOME_CTR'], 'total'),
@@ -614,7 +644,8 @@ function generateAllCharts() {
     }]
   };
 
-  ent1TData = JSON.parse(JSON.stringify(entradasDataTemplate));
+  // 1°T
+  const ent1TData = JSON.parse(JSON.stringify(entradasDataTemplate));
   ent1TData.datasets[0].data = [
     getDataByPeriod(['ENT_HOME_ESQ'], 'half1'),
     getDataByPeriod(['ENT_HOME_CTR'], 'half1'),
@@ -625,7 +656,8 @@ function generateAllCharts() {
   ];
   createChartForPDF('ent1TChart', 'Entradas no Último Terço - 1° Tempo', ent1TData, 'bar', true);
 
-  ent2TData = JSON.parse(JSON.stringify(entradasDataTemplate));
+  // 2°T
+  const ent2TData = JSON.parse(JSON.stringify(entradasDataTemplate));
   ent2TData.datasets[0].data = [
     getDataByPeriod(['ENT_HOME_ESQ'], 'half2'),
     getDataByPeriod(['ENT_HOME_CTR'], 'half2'),
@@ -636,7 +668,8 @@ function generateAllCharts() {
   ];
   createChartForPDF('ent2TChart', 'Entradas no Último Terço - 2° Tempo', ent2TData, 'bar', true);
 
-  entTotalData = JSON.parse(JSON.stringify(entradasDataTemplate));
+  // Total
+  const entTotalData = JSON.parse(JSON.stringify(entradasDataTemplate));
   entTotalData.datasets[0].data = [
     getDataByPeriod(['ENT_HOME_ESQ'], 'total'),
     getDataByPeriod(['ENT_HOME_CTR'], 'total'),
@@ -679,17 +712,23 @@ function generateAllCharts() {
   createChartForPDF('escFalta1TChart', 'Escanteios e Faltas Laterais - 1° Tempo', createEscFaltaData('half1'));
   createChartForPDF('escFalta2TChart', 'Escanteios e Faltas Laterais - 2° Tempo', createEscFaltaData('half2'));
   createChartForPDF('escFaltaTotalChart', 'Escanteios e Faltas Laterais - Total da Partida', createEscFaltaData('total'));
+  
+  console.log('✅ Gráficos gerados com sucesso!');
 }
 
 // ==================== GERAÇÃO DE PDF ====================
 async function generatePDFReport() {
+  if (!window.jspdf) {
+    alert('❌ Biblioteca jsPDF não carregada. Recarregue a página.');
+    return;
+  }
+
   try {
     triggerHapticFeedback();
     console.log('🔄 Iniciando geração do PDF...');
     
     // Gera todos os gráficos
     generateAllCharts();
-    console.log('📊 Gráficos gerados...');
     
     // Aguarda renderização
     await new Promise(resolve => setTimeout(resolve, 2000)); 
@@ -874,15 +913,13 @@ async function generatePDFReport() {
     
   } catch (error) {
     console.error('❌ Erro detalhado na geração do PDF:', error);
-    console.error('Stack trace:', error.stack);
+    alert(`❌ Erro ao gerar PDF: ${error.message}`);
     
     // Limpa gráficos em caso de erro
     Object.values(chartsInstances).forEach(chart => {
       if (chart) chart.destroy();
     });
     chartsInstances = {};
-    
-    alert(`❌ Erro ao gerar PDF: ${error.message}`);
   }
 }
 
@@ -936,48 +973,48 @@ const rowDefinitions = [
 ];
 
 function buildLiveTagProXml() {
-  let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
-  xml += `<file>\n`;
+  let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
+  xml += '<file>\n';
   xml += `    <!--Generated by FutTag Pro - ${appState.teamNames.home} vs ${appState.teamNames.away}-->\n`;
-  xml += `    <SORT_INFO>\n`;
-  xml += `        <sort_type>sort order</sort_type>\n`;
-  xml += `    </SORT_INFO>\n`;
-  xml += `    <ALL_INSTANCES>\n`;
+  xml += '    <SORT_INFO>\n';
+  xml += '        <sort_type>sort order</sort_type>\n';
+  xml += '    </SORT_INFO>\n';
+  xml += '    <ALL_INSTANCES>\n';
 
   const eventInstances = appState.events.filter(event => event.type === 'EVENT');
 
   eventInstances.forEach(event => {
-    xml += `        <instance>\n`;
+    xml += '        <instance>\n';
     xml += `            <ID>${event.id}</ID>\n`;
     xml += `            <code>${escapeXml(event.code)}</code>\n`;
     xml += `            <start>${event.start.toFixed(6)}</start>\n`;
     xml += `            <end>${event.end.toFixed(6)}</end>\n`;
-    xml += `            <label>\n`;
-    xml += `                <group>Event</group>\n`;
+    xml += '            <label>\n';
+    xml += '                <group>Event</group>\n';
     xml += `                <text>${escapeXml(event.code)}</text>\n`;
-    xml += `            </label>\n`;
-    xml += `        </instance>\n`;
+    xml += '            </label>\n';
+    xml += '        </instance>\n';
   });
 
-  xml += `    </ALL_INSTANCES>\n`;
-  xml += `    <ROWS>\n`;
+  xml += '    </ALL_INSTANCES>\n';
+  xml += '    <ROWS>\n';
 
   rowDefinitions.forEach(row => {
     const rgb = hexToRgb(row.color);
     const R = rgbToLiveTagProColor(rgb.r);
     const G = rgbToLiveTagProColor(rgb.g);
     const B = rgbToLiveTagProColor(rgb.b);
-    xml += `        <row>\n`;
+    xml += '        <row>\n';
     xml += `            <sort_order>${row.sort_order}</sort_order>\n`;
     xml += `            <code>${escapeXml(row.code)}</code>\n`;
     xml += `            <R>${R}</R>\n`;
     xml += `            <G>${G}</G>\n`;
     xml += `            <B>${B}</B>\n`;
-    xml += `        </row>\n`;
+    xml += '        </row>\n';
   });
 
-  xml += `    </ROWS>\n`;
-  xml += `</file>\n`;
+  xml += '    </ROWS>\n';
+  xml += '</file>\n';
   return xml;
 }
 
@@ -998,11 +1035,15 @@ function exportXML() {
 function showStatsModal() {
   triggerHapticFeedback();
   updateStatsSummary();
-  statsModal.style.display = 'block';
+  if (statsModal) {
+    statsModal.style.display = 'block';
+  }
 }
 
 function hideStatsModal() {
-  statsModal.style.display = 'none';
+  if (statsModal) {
+    statsModal.style.display = 'none';
+  }
   
   // Limpa os gráficos para liberar memória
   Object.values(chartsInstances).forEach(chart => {
@@ -1014,21 +1055,23 @@ function hideStatsModal() {
 // ==================== EVENT LISTENERS ====================
 
 // Cronômetro
-btnToggleTimer.addEventListener('click', () => {
-  if (!appState.timer.isRunning && appState.timer.elapsedMs === 0) {
-    startTimer();
-  } else if (appState.timer.isRunning) {
-    pauseTimer();
-  } else {
-    startTimer();
-  }
-});
+if (btnToggleTimer) {
+  btnToggleTimer.addEventListener('click', () => {
+    if (!appState.timer.isRunning && appState.timer.elapsedMs === 0) {
+      startTimer();
+    } else if (appState.timer.isRunning) {
+      pauseTimer();
+    } else {
+      startTimer();
+    }
+  });
+}
 
 // Controles principais
-btnResetAll.addEventListener('click', resetAll);
-btnUndo.addEventListener('click', undoLastAction);
-btnShowStats.addEventListener('click', showStatsModal);
-btnTeamConfig.addEventListener('click', showTeamConfigModal);
+if (btnResetAll) btnResetAll.addEventListener('click', resetAll);
+if (btnUndo) btnUndo.addEventListener('click', undoLastAction);
+if (btnShowStats) btnShowStats.addEventListener('click', showStatsModal);
+if (btnTeamConfig) btnTeamConfig.addEventListener('click', showTeamConfigModal);
 
 // Controles de metade
 document.querySelectorAll('.half-btn').forEach(btn => {
@@ -1050,7 +1093,7 @@ document.querySelectorAll('.event-btn').forEach(btn => {
 });
 
 // Modal de estatísticas
-closeButton.addEventListener('click', hideStatsModal);
+if (closeButton) closeButton.addEventListener('click', hideStatsModal);
 window.addEventListener('click', (event) => {
   if (event.target === statsModal) {
     hideStatsModal();
@@ -1058,9 +1101,9 @@ window.addEventListener('click', (event) => {
 });
 
 // Modal de configuração das equipes
-teamConfigClose.addEventListener('click', hideTeamConfigModal);
-btnSaveTeamConfig.addEventListener('click', saveTeamConfiguration);
-btnResetTeamConfig.addEventListener('click', resetTeamConfiguration);
+if (teamConfigClose) teamConfigClose.addEventListener('click', hideTeamConfigModal);
+if (btnSaveTeamConfig) btnSaveTeamConfig.addEventListener('click', saveTeamConfiguration);
+if (btnResetTeamConfig) btnResetTeamConfig.addEventListener('click', resetTeamConfiguration);
 
 // Fecha modal de configuração ao clicar fora
 window.addEventListener('click', (event) => {
@@ -1070,24 +1113,30 @@ window.addEventListener('click', (event) => {
 });
 
 // Enter nos inputs para salvar
-homeTeamInput.addEventListener('keydown', (event) => {
-  if (event.key === 'Enter') {
-    awayTeamInput.focus();
-  }
-});
+if (homeTeamInput) {
+  homeTeamInput.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      if (awayTeamInput) awayTeamInput.focus();
+    }
+  });
+}
 
-awayTeamInput.addEventListener('keydown', (event) => {
-  if (event.key === 'Enter') {
-    saveTeamConfiguration();
-  }
-});
+if (awayTeamInput) {
+  awayTeamInput.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      saveTeamConfiguration();
+    }
+  });
+}
 
 // Exportações
-btnGeneratePDF.addEventListener('click', generatePDFReport);
-btnExportXML.addEventListener('click', exportXML);
+if (btnGeneratePDF) btnGeneratePDF.addEventListener('click', generatePDFReport);
+if (btnExportXML) btnExportXML.addEventListener('click', exportXML);
 
 // ==================== INICIALIZAÇÃO ====================
 function initializeApp() {
+  console.log('🔄 Inicializando FutTag Pro...');
+  
   // Carrega nomes das equipes salvos
   loadTeamNames();
   
@@ -1102,7 +1151,7 @@ function initializeApp() {
   // Verifica se é a primeira execução
   checkFirstRun();
 
-  console.log('🚀 FutTag Pro v3.0 inicializado com sucesso!');
+  console.log('🚀 FutTag Pro v3.1 inicializado com sucesso!');
   console.log('⚽ Sistema de nomes customizáveis implementado');
   console.log(`🏠 Time da casa: ${appState.teamNames.home}`);
   console.log(`✈️ Time visitante: ${appState.teamNames.away}`);

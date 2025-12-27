@@ -450,15 +450,6 @@ body {
   justify-content: center;
 }
 
-.hidden-chart-group {
-  margin-bottom: 20px;
-}
-.hidden-chart-group h3 {
-  text-align: center;
-  color: var(--text-color);
-  margin-bottom: 10px;
-}
-
 /* Responsividade para Mobile */
 @media (max-width: 768px) {
   :root {
